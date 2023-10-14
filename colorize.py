@@ -5,6 +5,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+from cc_pathlib import Path
+
 lvl = plt.imread('demo_01.png')[:,:,0].astype(np.uint16)
 
 jump_factor = np.array([
@@ -56,9 +58,37 @@ class Cartographer() :
 
 		self.colorize()
 
+		Path("circle.pson").write_text(repr(self.g_map))
+
+		self.plot_debug()
+		# for n in self.g_map :
+		# 	for r, c in self.g_map[n] :
+		# 		self.lvl[r, c] = 20
+
+	def is_point_in_convex_hull(self, p, h_lst) :
+		x_max = max([x for y, x in h_lst]) + 1
+
+	def plot_debug(self) :
+		plt.figure()
 		for n in self.g_map :
-			for r, c in self.g_map[n] :
-				self.lvl[r, c] = 20
+			plt.plot([c for r, c in self.g_map[n]], [r for r, c in self.g_map[n]])
+
+		plt.imshow(self.lvl)
+		plt.colorbar()
+		for n in self.g_map :
+			h_prev = 0
+			h_lst = self.g_map[n]
+			while len(h_lst) != h_prev :
+				h_prev = len(h_lst)
+				h_lst = self.convex(h_lst)
+			print(len(self.g_map[n]), "->", len(h_lst))
+			r_lst = [r for r, c in h_lst]
+			c_lst = [c for r, c in h_lst]
+			plt.plot(c_lst, r_lst)
+			#for r, c in self.g_map[n] :
+			#	self.lvl[r, c] = 20
+
+		plt.show()
 
 	def fill(self, o, r, c, n) :
 		row, col = self.lvl.shape
@@ -90,41 +120,74 @@ class Cartographer() :
 						self.g_map[n] = self.circle(r, c, n)
 					z[o] += 1
 
+	def convex(self, g_lst) :
+		g_lst = g_lst + [g_lst[0],]#  + [self.g_map[n][0],]
+		h_lst = list()
+
+		p = 0
+		while p < len(g_lst) :
+			h_lst.append(g_lst[p])
+			p = self.scan(g_lst, p)
+
+		return h_lst[:-1]
+	
+	def scan(self, g_lst, start_at) :
+		i, j = start_at, start_at + 2		
+		while j < len(g_lst) :
+			ax, ay = g_lst[i]
+			bx, by = g_lst[j]
+			for k in range(i + 1, j) :
+				mx, my = g_lst[k]
+				z = ((bx - ax)*(my - ay)) - ((by - ay)*(mx - ax))
+				if z > 0 :
+					return j - 1
+			else :
+				j += 1
+		return j - 1
+
 	def circle(self, r, c, n) :
-
-		# r, c = self.g_map[n]
-
+		""" follow the pixels around a blob,
+		return a list of consecutive pixels gathered clockwise"""
 		ext = np.zeros([k + 2 for k in self.lvl.shape], dtype=np.uint16) # extended version of lvl with a 1 px border
 		ext[1:-1,1:-1] = ( self.lvl == n )
 
-		r_lst = [(r, c),]
+		g_lst = [(r, c),]
 		while True :
 			p = ext[r:r+3,c:c+3]
 			i, j = jump_index[np.sum(p * jump_factor)]
-
 			if i == 0 and j == 0 :
-				print(p, np.sum(p * jump_factor), i, j)
+				print("ERR: next step unknown\n", p, np.sum(p * jump_factor), i, j)
 				plt.imshow(self.lvl)
 				plt.show()
 				sys.exit(0)
-
 			r += i
 			c += j
-			# self.lvl[r, c] = 0
-			if (r, c) == r_lst[0] :
+			if (r, c) == g_lst[0] :
 				break
-			r_lst.append((r, c))
+			g_lst.append((r, c))
 
-		#print(r_lst)
-		#plt.imshow(self.lvl)
-		#plt.show()
-		return r_lst
+		return self.simplify(g_lst)
+
+	def simplify(self, g_lst) :
+		"""the pixel list contains many redundant points
+		this function return a simplified version """
+
+		f_lst = list()
+		for a, b in zip(g_lst, g_lst[1:] + [g_lst[0],]) :
+			f_lst.append((b[0] - a[0], b[1] - a[1]))
+
+		u_lst = list()
+		p_prev = (0, 0)
+		p_next = g_lst[0]
+		while f_lst :
+			p_curr = f_lst.pop(0)
+			if p_prev != p_curr :
+				u_lst.append(p_next) 
+			p_next = (p_next[0] + p_curr[0], p_next[1] + p_curr[1])
+			p_prev = p_curr
+
+		return u_lst
 
 u = Cartographer(lvl)
-# u.circle(8)
-print(u.g_map)
 
-plt.imshow(u.lvl)
-plt.colorbar()
-plt.show()
 
