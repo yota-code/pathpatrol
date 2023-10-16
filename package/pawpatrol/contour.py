@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import itertools
 import math
 import sys
 
@@ -11,8 +12,8 @@ from cc_pathlib import Path
 class Contour() :
 	def __init__(self, x_lst=None, y_lst=None, is_convex=False) :
 		""" the line is expected to turn in the trigonometric way in a direct (Oxy) frame """
-		self.x_lst = x_lst if x_lst is not None else list()
-		self.y_lst = y_lst if y_lst is not None else list()
+		self.x_lst = list(x_lst) if x_lst is not None else list()
+		self.y_lst = list(y_lst) if y_lst is not None else list()
 
 		assert(len(self.x_lst) == len(self.y_lst))
 
@@ -97,6 +98,26 @@ class Contour() :
 			else :
 				j += 1
 		return j - 1
+	
+	def simplified(self) :
+		""" useful only for pixel based contours """
+		p_lst = [self[0],]
+		move_pre = (0, 0)
+		for i in range(1, len(self)) :
+			x0, y0 = self[i-1]
+			x1, y1 = self[i]
+			move_cur = (x1 - x0, y1 - y0)
+			if move_cur == move_pre :
+				p_lst[-1] = (p_lst[-1][0] + move_cur[0], p_lst[-1][1] + move_cur[1])
+			else :
+				p_lst.append(move_cur)
+			move_pre = move_cur
+
+		return self.__class__(
+			itertools.accumulate([x for x, y in p_lst]),
+			itertools.accumulate([y for x, y in p_lst])
+		)
+
 
 class Contour_Cartesian(Contour) :
 	def side(self, A, B, M) :

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import itertools
 import sys
 
 import numpy as np
@@ -38,7 +39,7 @@ class RasterMap() :
 		plt.show()
 
 	def fill(self, r, c, n) :
-		""" fill with the color n, all the plane which has the same color as the color found at [r, c]
+		""" fill with the color n, the part of the plane which is connected to the initial pixel (r, c)
 		modify self.lvl in place """
 		row, col = self.lvl.shape
 		o = self.lvl[r, c]
@@ -93,5 +94,5 @@ class RasterMap() :
 			if (c, r) == g_lst[0] :
 				break
 			g_lst.push(c, r)
-		return g_lst
+		return g_lst.simplified()
 

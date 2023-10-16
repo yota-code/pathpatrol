@@ -6,5 +6,5 @@ class VectorMap() :
 
 		self.h_map = dict()
 		for n in g_map :
-			self.h_map[n] = g_map[n].convex()
+			self.h_map[n] = g_map[n] # .convex()
 	
