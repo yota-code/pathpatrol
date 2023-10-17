@@ -32,43 +32,43 @@ class Piece() :
 
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--', color="tab:blue")
-		plt.plot(self.x_arr[0], self.y_arr[0], '+', color="tab:red")
+		print(self.m_arr)
+		print(np.where(self.m_arr == 0))
+		print(self.x_arr[np.where(self.m_arr== 0)])
+		plt.plot(self.x_arr[np.where(self.m_arr == 0)], self.y_arr[np.where(self.m_arr == 0)], '+--', color="tab:green")
+		plt.plot(self.x_arr[0], self.y_arr[0], '+', color="tab:red", linewidth=8, alpha=0.5)
 		plt.grid()
 		plt.axis("equal")
 		plt.show()
-
 
 	def detour(self) :
 		"""
 		try to cross a cavity, iter each next point after at, which is not already in a cavity
 		"""
+		def next_zero(start) :
+			for i in range(start+1, len(self) + 1) :
+				if self.m_arr[i % len(self)] == 0 :
+					print(" --> ", i)
+					return i
+			raise ValueError
+
+
 		z_prev = None
 		while (z_curr := np.sum(self.m_arr)) != z_prev :
-			a = 0
-			while a < (len(self) + 1) :
-				b = a + 2
-				while self.m_arr[b] < 0 and b < (len(self) + 1) :
-					b += 1
-					if self.side(self[a], self[b], self[b-1]) < 0 :
-						self.m_arr[b-1] = -2
-		# 	for a in range(0, len(self) + 1) :
-		# 		print(f"     i_{i} = {self.x_arr[i]}, {self.y_arr[i]}")
-		# 		j = i + 2
-
-		# 		if self.m_arr[i] == 0 :
-		# 			if a is None : # on prend le premier point non encore assigné comme point de départ
-		# 				a = i
-		# 				print(f"---> a_{a} = {self.x_arr[a]}, {self.y_arr[a]}")
-		# 				continue
-		# 			elif 1 < i - a  : # si on a avancé de 2 points
-		# 				b = i
-		# 				print(f"---> b_{b} = {self.x_arr[b]}, {self.y_arr[b]}")
-		# 				w = self.side(self[a], self[b], self[b-1])
-		# 				print("w = ", w)
-		# 				if w > 0 :
-		# 					self.m_arr[a+1:b] = -2
-
-		# print(self.m_arr)
+			i = 0
+			while True :
+				try :
+					a = next_zero(i)
+					m = next_zero(a)
+					b = next_zero(m)
+				except ValueError :
+					print("error")
+					break
+				w = self.side(self[a], self[b], self[m])
+				if w >= 0 :
+					self.m_arr[a+1:b] = -1
+				i = a
+			z_prev = z_curr		
 
 	def side(self, A, B, M) :
 		""" returns
