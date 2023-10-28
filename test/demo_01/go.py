@@ -5,13 +5,12 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
-from pawpatrol.rastermap import RasterMap
-from pawpatrol.vectormap import VectorMap
+from pathpatrol.rastermap import RasterMap
+from pathpatrol.vectormap import VectorMap
 
 lvl = plt.imread('map.png')[:,:,0].astype(np.uint16)
 
 u = RasterMap(lvl)
-u.segment()
 
 v = VectorMap(u.g_map)
 

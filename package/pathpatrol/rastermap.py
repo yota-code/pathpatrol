@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import itertools
+import math
 import sys
 
 import numpy as np
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
-from pawpatrol.contour import Contour_Cartesian as Contour
+from pathpatrol.polygon import Polygon
 
 class RasterMap() :
 
@@ -21,8 +21,8 @@ class RasterMap() :
 	jump_index = {
 		11: (0, -1), 15: (0, -1), 22: (-1, 0), 23: (-1, -1), 31: (0, -1), 43: (1, -1), 47: (1, -1),
 		63: (1, -1), 104: (1, 0), 105: (1, 0), 107: (1, 0), 111: (1, 0), 150: (-1, 0), 151: (-1, -1),
-		159: (0, -1), 208: (0, 1), 212: (-1, 1), 214: (-1, 0), 215: (-1, -1), 232: (1, 1), 233: (1, 1),
-		235: (1, 1), 240: (0, 1), 244: (-1, 1), 246: (-1, 0), 248: (0, 1), 249: (0, 1), 252: (-1, 1)
+		159: (0, -1), 191: (1, -1), 208: (0, 1), 212: (-1, 1), 214: (-1, 0), 215: (-1, -1), 232: (1, 1), 233: (1, 1),
+		235: (1, 1), 240: (0, 1), 244: (-1, 1), 246: (-1, 0), 247: (-1, -1), 248: (0, 1), 249: (0, 1), 252: (-1, 1)
 	}
 
 	def __init__(self, lvl) :
@@ -59,8 +59,6 @@ class RasterMap() :
 	def segment(self) :
 		"""colorize the B/W plane with colors from 2 to n"""
 		row, col = self.lvl.shape
-
-		self.g_map = dict()
 		
 		z = [1, 1]
 		for r in range(row) :
@@ -70,29 +68,31 @@ class RasterMap() :
 					n = 2*z[o] + o
 					self.fill(r, c, n)
 					if o == 0 :
-						self.g_map[n] = self.contour(r, c, n)
+						yield self.circle(r, c, n)
 					z[o] += 1
 
-	def contour(self, r, c, n) :
+	def circle(self, r, c, n) :
 		"""follow the pixels around a blob,
 		return a list of consecutive pixels gathered clockwise"""
 		ext = np.zeros([k + 2 for k in self.lvl.shape], dtype=np.uint16) # extended version of lvl with a 1 px border
-		ext[1:-1,1:-1] = ( self.lvl == n )
+		ext[1:-1,1:-1] = (self.lvl == n)
 
-		g_lst = Contour([c,], [r,])
+		x_lst, y_lst = [c,], [r,]
 		z = 0
 		while True :
 			p = ext[r:r+3,c:c+3]
-			i, j = self.jump_index[np.sum(p * self.jump_factor)]
-			if i == 0 and j == 0 :
+			try :
+				i, j = self.jump_index[np.sum(p * self.jump_factor)]
+			except KeyError :
 				print("ERR: next step unknown\n", p, np.sum(p * self.jump_factor), i, j)
 				plt.imshow(self.lvl)
+				plt.plot([c,], [r,], '+')
 				plt.show()
 				sys.exit(0)
 			r += i
 			c += j
-			if (c, r) == g_lst[0] :
+			if (c, r) == (x_lst[0], y_lst[0]) :
 				break
-			g_lst.push(c, r)
-		return g_lst.simplified()
-
+			x_lst.append(c)
+			y_lst.append(r)
+		return Polygon(x_lst, y_lst).simplify()
