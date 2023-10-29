@@ -73,13 +73,13 @@ class Polygon() :
 		return k1, k2
 	
 	def is_inside(self, A) :
-		""" return True is point A is inside the Polygon """
+		""" return True if point A is inside the Polygon """
 		x_min, x_max, y_min, y_max = self.box
 
 		if not (x_min <= A[0] <= x_max and y_min <= A[1] <= y_max) :
 			return False
 
-		B = (x_max + 8, A[1])
+		B = (x_max + 4, A[1])
 
 		p = 0
 		for C, D in self.iter_segment() :
