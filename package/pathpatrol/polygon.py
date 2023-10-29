@@ -39,12 +39,23 @@ class Polygon() :
 	def __len__(self) :
 		return len(self.x_arr)
 	
-	def segments(self) :
+	def iter_segment(self) :
 		for i in range(len(self)) :
 			yield self[i], self[i+1]
 
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--')
+
+	def is_blocked(self, A, B) :
+		""" test if the segment A, B is blocked by the polygon """
+		(ax, ay), (bx, by) = A, B
+		if max(ax, bx) < self.box[0] or self.box[1] < min(ax, bx) or max(ay, by) < self.box[2] or self.box[3] < min(ay, by) :
+			return False
+		for C, D in self.iter_segment() :
+			k1, k2 = self.intersection(A, B, C, D)
+			if 0.0 <= k1 <= 1.0 and 0.0 <= k2 <= 1.0 :
+				return True
+		return False
 
 	def intersection(self, A, B, C, D) :
 		""" test if AB intersect CD, return the position of the intesection points or Math.Inf, if parrallel """
@@ -59,7 +70,7 @@ class Polygon() :
 		k1 = (ax*cy - ax*dy - ay*cx + ay*dx + cx*dy - cy*dx) / d
 		k2 = (-ax*by + ax*cy + ay*bx - ay*cx - bx*cy + by*cx) / d
 
-		return round(k1, 9), round(k2, 9)
+		return k1, k2
 	
 	def is_inside(self, A) :
 		""" return True is point A is inside the Polygon """
@@ -71,7 +82,7 @@ class Polygon() :
 		B = (x_max + 8, A[1])
 
 		p = 0
-		for C, D in self.segments() :
+		for C, D in self.iter_segment() :
 			# on pourrait optimiser, avec un test d'intersection qui tient compte de la situation particulière de A, B, horizontal et B toujours à droite
 			k1, k2 = self.intersection(A, B, C, D)
 			if k1 == 0.0 :
