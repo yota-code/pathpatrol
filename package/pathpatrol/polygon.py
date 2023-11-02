@@ -10,58 +10,77 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
-PolyBox = collections.namedtuple("PolyBox", ["left", "right", "bottom", "top"])
+Polybox = collections.namedtuple('Polybox', ['left', 'right', 'below', 'above'])
 
 class Polygon() :
 
 	""" a closed line """
 
-	def __init__(self, x_lst=None, y_lst=None) :
+	def __init__(self, x_lst=None, y_lst=None, p_arr=None) :
+
 		""" the line formed by x_lst and y_lst turn in the trigonometric way in a direct (Oxy) frame """
-		self.x_arr = np.array(x_lst if x_lst is not None else list(), dtype=np.float64)
-		self.y_arr = np.array(y_lst if y_lst is not None else list(), dtype=np.float64)
+		if x_lst is not None and y_lst is not None and (len(x_lst) == len(y_lst)) :
+			self.p_arr = np.array([(x, y) for x, y in zip(x_lst, y_lst)], dtype=np.float64)
+		elif p_arr is not None :
+			self.p_arr = p_arr
+		else :
+			raise ValueError
+		
+		self.box = Polybox(
+			np.min(self.x_arr), np.max(self.x_arr),
+			np.min(self.y_arr), np.max(self.y_arr)
+		)
 
-		assert(len(self.x_arr) == len(self.y_arr))
+	@property
+	def x_arr(self) :
+		return self.p_arr[:,0]
 
-		self.box = PolyBox(np.min(self.x_arr), np.max(self.x_arr), np.min(self.y_arr), np.max(self.y_arr))
+	@property
+	def y_arr(self) :
+		return self.p_arr[:,1]
+	
+	@property
+	def box_array(self) :
+		return np.array([
+			(self.box.left, self.box.below),
+			(self.box.right, self.box.below),
+			(self.box.right, self.box.above),
+			(self.box.left, self.box.above)
+		])
 
 	def __getitem__(self, i) :
 		if isinstance(i, int) :
-			return self.x_arr[i % len(self)], self.y_arr[i % len(self)]
+			return self.p_arr[i % len(self),:]
 		elif isinstance(i, slice) :
 			return np.array([self[j] for j in range(i.stop)[i]]).T
 		raise NotImplementedError(f"{type(i)}")
 		
 	def __iter__(self) :
-		for i in range(len(self)) :
-			yield self[i]
+		for p in self.p_arr :
+			yield p
 		
 	def __repr__(self) :
 		return f"Polygon({list(self.x_arr)}, {list(self.y_arr)})"
 			
 	def __len__(self) :
-		return len(self.x_arr)
+		return len(self.p_arr)
 	
 	def iter_segment(self) :
 		for i in range(len(self)) :
 			yield self[i], self[i+1]
 
 	def iter_boxcorner(self) :
-		for cx, cy in [
-			(self.box.left, self.box.bottom),
-			(self.box.right, self.box.bottom),
-			(self.box.right, self.box.top),
-			(self.box.left, self.box.top)
-		] :
+		for cx, cy in self.box_array :
 			yield cx, cy
 
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--')
+		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
 	def is_blocked(self, A, B) :
 		""" test if the segment A, B is blocked by the polygon """
 		(ax, ay), (bx, by) = A, B
-		if max(ax, bx) < self.box[0] or self.box[1] < min(ax, bx) or max(ay, by) < self.box[2] or self.box[3] < min(ay, by) :
+		if max(ax, bx) < self.box.left or self.box.right < min(ax, bx) or max(ay, by) < self.box.below or self.box.above < min(ay, by) :
 			return False
 		for C, D in self.iter_segment() :
 			k1, k2 = self.intersection(A, B, C, D)
@@ -121,6 +140,21 @@ class Polygon() :
 			list(itertools.accumulate([x for x, y in p_lst])),
 			list(itertools.accumulate([y for x, y in p_lst]))
 		)
+
+	def ventilate(self, M) :
+		""" return the unwrapped chain of angles around the polynom """
+		mx, my = M
+
+		d_arr = np.sqrt((self.x_arr - mx)**2 + (self.y_arr - my)**2)
+
+		m_lst = [0.0,]
+		for i in range(len(self)) :
+			j = (i + 1) % len(self)
+			(ax, ay), (bx, by) = self.p_arr[i], self.p_arr[j]
+			u = ((ax - mx)*(by - my)) - ((ay - my)*(bx - mx))
+			m_lst.append(m_lst[-1] + math.asin(u / (d_arr[i] * d_arr[j])))
+
+		return np.array(m_lst)
 
 	def tangent(self, M) :
 		""" find the two indices of the points which are tangent to the polygon and passes through M

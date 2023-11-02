@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
+# on pourrait reprendre Piece pour qu'il soit plus flexible et écrire quelques optimisations de la détection de collision
+
+
 class RoutePart() :
     def __init__(self, A, B) :
         self.A = A
@@ -23,3 +26,6 @@ def side(A, B, M) : où M est une liste ou mieux ! un np.array
 def find_blocking_pieces(self, A, B) :
     """ A and B are considered free points, self is a layer """
     
+
+
+
