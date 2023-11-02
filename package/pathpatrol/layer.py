@@ -10,6 +10,8 @@ import pathpatrol.piece
 
 class Layer() :
 
+	""" represent a single level """
+
 	c_map = {
 		"RR" : "tab:green",
 		"LL" : "tab:red",
@@ -30,7 +32,7 @@ class Layer() :
 
 		return self
 	
-	def compute_route(self) :
+	def compute_routes(self) :
 		self.r_lst = list()
 
 		for i, j, p, q, w in self.iter_tangent() :

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import collections
 import itertools
 import math
 import sys
@@ -8,6 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
+
+PolyBox = collections.namedtuple("PolyBox", ["left", "right", "bottom", "top"])
 
 class Polygon() :
 
@@ -20,7 +23,7 @@ class Polygon() :
 
 		assert(len(self.x_arr) == len(self.y_arr))
 
-		self.box = (np.min(self.x_arr), np.max(self.x_arr), np.min(self.y_arr), np.max(self.y_arr))
+		self.box = PolyBox(np.min(self.x_arr), np.max(self.x_arr), np.min(self.y_arr), np.max(self.y_arr))
 
 	def __getitem__(self, i) :
 		if isinstance(i, int) :
@@ -42,6 +45,15 @@ class Polygon() :
 	def iter_segment(self) :
 		for i in range(len(self)) :
 			yield self[i], self[i+1]
+
+	def iter_boxcorner(self) :
+		for cx, cy in [
+			(self.box.left, self.box.bottom),
+			(self.box.right, self.box.bottom),
+			(self.box.right, self.box.top),
+			(self.box.left, self.box.top)
+		] :
+			yield cx, cy
 
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--')
