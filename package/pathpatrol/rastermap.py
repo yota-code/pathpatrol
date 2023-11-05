@@ -26,7 +26,9 @@ class RasterMap() :
 	}
 
 	def __init__(self, lvl) :
-		# lvl must be a black & white image, with zero/black for blocked, one/white for clear pixel
+		# lvl must be a black & white image, with:
+		#   - zero/black for the obstacle,
+		#   - one/white for clear pixel
 		self.lvl = lvl[:].astype(np.uint16)
 
 	def plot(self) :
@@ -56,22 +58,7 @@ class RasterMap() :
 						self.lvl[a, b] = n
 						w_set.add((a, b))
 
-	def segment(self) :
-		"""colorize the B/W plane with colors from 2 to n"""
-		row, col = self.lvl.shape
-		
-		z = [1, 1]
-		for r in range(row) :
-			for c in range(col) :
-				o = self.lvl[r, c]
-				if o in [0, 1] :
-					n = 2*z[o] + o
-					self.fill(r, c, n)
-					if o == 0 :
-						yield self.circle(r, c, n)
-					z[o] += 1
-
-	def circle(self, r, c, n) :
+	def stroke(self, r, c, n) :
 		"""follow the pixels around a blob,
 		return a list of consecutive pixels gathered clockwise"""
 		ext = np.zeros([k + 2 for k in self.lvl.shape], dtype=np.uint16) # extended version of lvl with a 1 px border
@@ -96,3 +83,19 @@ class RasterMap() :
 			x_lst.append(c)
 			y_lst.append(r)
 		return Polygon(x_lst, y_lst).simplify()
+
+	def extract(self) :
+		"""colorize the B/W plane with colors from 2 to n"""
+		row, col = self.lvl.shape
+		
+		z = [1, 1]
+		for r in range(row) :
+			for c in range(col) :
+				o = self.lvl[r, c]
+				if o in [0, 1] :
+					n = 2*z[o] + o
+					self.fill(r, c, n)
+					if o == 0 :
+						yield self.stroke(r, c, n)
+					z[o] += 1
+

@@ -22,13 +22,21 @@ class Layer() :
 	def __init__(self) :
 		pass
 	
+	def __repr__(self) :
+		return repr(self.g_lst)
+	
+	def to_json(self) :
+		return [g.to_json() for g in self.g_lst]
+
 	def load_rastermap(self, img_pth) :
 		from pathpatrol.rastermap import RasterMap
 
-		lvl = plt.imread('map.png')[:,:,0].astype(np.uint16)
-		r_map = RasterMap(lvl)
+		lvl = plt.imread(img_pth)[:,:,0].astype(np.uint16)
 
-		self.g_lst = [pathpatrol.piece.Piece(r.x_arr, r.y_arr) for r in r_map.segment()]
+		self.g_lst = [
+			pathpatrol.piece.Piece(r)
+			for r in RasterMap(lvl).extract()
+		]
 
 		return self
 	
@@ -57,11 +65,12 @@ class Layer() :
 				yield i, j, aj, bj, "RR"
 
 	def plot(self) :
-		plt.figure()
+		# plt.figure()
 		for g in self.g_lst :
+			g.orig.plot()
 			g.convex.plot()
-		for i, j, p, q, w in self.r_lst :
-			a, b = self.g_lst[i].convex, self.g_lst[j].convex
-			plt.plot([a[p][0], b[q][0]], [a[p][1], b[q][1]], color=self.c_map[w])
-		plt.grid()
-		plt.show()
+		#for i, j, p, q, w in self.r_lst :
+		#	a, b = self.g_lst[i].convex, self.g_lst[j].convex
+		#	plt.plot([a[p][0], b[q][0]], [a[p][1], b[q][1]], color=self.c_map[w])
+		#plt.grid()
+		#plt.show()

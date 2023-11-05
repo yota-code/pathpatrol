@@ -47,6 +47,9 @@ class Polygon() :
 			(self.box.right, self.box.above),
 			(self.box.left, self.box.above)
 		])
+	
+	def to_json(self) :
+		return [list(self.x_arr), list(self.y_arr)]
 
 	def __getitem__(self, i) :
 		if isinstance(i, int) :
@@ -77,7 +80,11 @@ class Polygon() :
 		plt.plot(self.x_arr, self.y_arr, '+--')
 		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
-	def is_blocked(self, A, B) :
+	def is_outside(self, A) :
+		
+
+
+	def is_obstacle(self, A, B) :
 		""" test if the segment A, B is blocked by the polygon """
 		(ax, ay), (bx, by) = A, B
 		if max(ax, bx) < self.box.left or self.box.right < min(ax, bx) or max(ay, by) < self.box.below or self.box.above < min(ay, by) :
@@ -142,12 +149,14 @@ class Polygon() :
 		)
 
 	def ventilate(self, M) :
+		raise NotImplementedError
 		""" return the unwrapped chain of angles around the polynom """
 		mx, my = M
 
+		orig = math.atan2(self.y_arr[0] - my, self.x_arr[0] - mx)
 		d_arr = np.sqrt((self.x_arr - mx)**2 + (self.y_arr - my)**2)
 
-		m_lst = [0.0,]
+		m_lst = [orig,] # on risque que la somme soit moins précise
 		for i in range(len(self)) :
 			j = (i + 1) % len(self)
 			(ax, ay), (bx, by) = self.p_arr[i], self.p_arr[j]
@@ -155,6 +164,21 @@ class Polygon() :
 			m_lst.append(m_lst[-1] + math.asin(u / (d_arr[i] * d_arr[j])))
 
 		return np.array(m_lst)
+	
+	def to_polar(self, A) :
+		""" return the polygon expressed as an angle (m_arr in radian) and a distance (d_arr)
+		from a given point """
+		# if B is None :
+		# 	B = self.p_arr[0,:]
+
+		(ax, ay), mx, my = A, self.x_arr, self.y_arr
+		# e = math.sqrt((bx - ax)**2 + (by - ay)**2)
+		# k = math.atan2(by - ay, bx - ax)
+		
+		d_arr = np.sqrt((self.x_arr - ax)**2 + (self.y_arr - ay)**2)
+		m_arr = np.arctan2(my - ay, mx - ax)
+		
+		return m_arr, d_arr
 
 	def tangent(self, M) :
 		""" find the two indices of the points which are tangent to the polygon and passes through M

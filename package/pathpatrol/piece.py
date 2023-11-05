@@ -14,13 +14,22 @@ class Piece() :
 	def __init__(self, orig:Polygon) :
 		self.orig = orig
 
-		self.m_arr = np.zeros((len(self.orig),), dtype=np.int8)
+		self.z_arr = np.zeros((len(self.orig),), dtype=np.int8)
 
-		self._prep_cut()
-		self._prep_sort()
+		self.compute_convex()
+		self.compute_concave()
 
 	def __len__(self) :
-		return len(self.m_arr)
+		return len(self.z_arr)
+	
+	def to_json(self) :
+		return {
+			'orig' : self.orig.to_json(),
+			'convex' : self.convex.to_json(),
+			'concave' : {
+				f"{k[0]}/{k[1]}" : v.to_json() for k, v in self.concave.items()
+			}
+		}
 	
 	def plot(self) :
 		plt.plot(self.orig.x_arr, self.orig.y_arr, '+--', color="tab:blue")
@@ -29,12 +38,31 @@ class Piece() :
 		print(self.orig.x_arr[np.where(self.m_arr== 0)])
 		plt.plot(self.convex.x_arr, self.convex.y_arr, 'x-', color="tab:green", linewidth=3, alpha=0.5)
 		plt.plot(self.orig.x_arr[0], self.orig.y_arr[0], '+', color="tab:red")
-		for k, u in self.cavity.items() :
-			print(k, u.x_arr, u.y_arr)
-			plt.plot(u.x_arr, u.y_arr)
+		for k, v in self.concave.items() :
+			print(k, v.x_arr, v.y_arr)
+			plt.plot(v.x_arr, v.y_arr)
 		plt.grid()
 		plt.axis("equal")
 		plt.show()
+
+	def compute_convex(self) :
+		for i, A in enumerate(self.orig) :
+			m_arr = np.arctan2(self.orig.y_arr - A[1], self.orig.x_arr - A[0])
+			u_arr = np.unwrap(np.hstack((m_arr[i+1:], m_arr[:i])))
+			u_min = np.nanmin(u_arr)
+			u_max = np.nanmax(u_arr)
+			self.z_arr[i] = (u_max - u_min) < math.pi
+		self.convex = Polygon(p_arr=self.orig.p_arr[self.z_arr != 0,:])
+
+	def compute_concave(self) :
+		self.concave = dict()
+		for i in range(0, len(self)) :
+			m = self.z_arr[(i+1) % len(self)] - self.z_arr[i % len(self)]
+			if m < 0 :
+				a = i
+			if m > 0 :
+				b = i + 2
+				self.concave[(a, b)] = Polygon(* self.orig[a:b])
 
 	def _prep_sort(self) :
 		self.convex = Polygon(
@@ -44,9 +72,9 @@ class Piece() :
 		self.cavity = dict()
 		for i in range(0, len(self)) :
 			m = self.m_arr[(i+1) % len(self)] - self.m_arr[i % len(self)]
-			if m < 0 :
-				a = i
 			if m > 0 :
+				a = i
+			if m < 0 :
 				b = i + 2
 				self.cavity[(a, b)] = Polygon(* self.orig[a:b])
 
@@ -57,7 +85,6 @@ class Piece() :
 		def next_zero(start) :
 			for i in range(start+1, len(self) + 1) :
 				if self.m_arr[i % len(self)] == 0 :
-					print(" --> ", i)
 					return i
 			raise ValueError
 

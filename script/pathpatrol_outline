@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import sys
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from cc_pathlib import Path
+
+from pathpatrol.layer import Layer
+
+if __name__ == "__main__" :
+
+	pth = Path(sys.argv[1]).resolve()
+
+	if pth.suffix != '.png' :
+		raise ValueError
+
+	u = Layer().load_rastermap(pth)
+
+	print(u.g_lst[0].z_arr, len(u.g_lst[0].z_arr), sum(u.g_lst[0].z_arr))
+	print(u.g_lst[0].orig.x_arr[u.g_lst[0].z_arr], len(u.g_lst[0].orig.x_arr[u.g_lst[0].z_arr]))
+
+	print(u.g_lst[0].convex)
+
+	plt.figure()
+	plt.plot(u.g_lst[0].orig.x_arr, u.g_lst[0].orig.y_arr, '+--')
+	#plt.plot(u.g_lst[0].orig.x_arr[u.g_lst[0].z_arr != 0], u.g_lst[0].orig.y_arr[u.g_lst[0].z_arr != 0], "+--")
+	plt.plot(u.g_lst[0].convex.x_arr, u.g_lst[0].convex.y_arr, 'o-')
+	plt.grid()
+	plt.axis("equal")
+	plt.show()
+
+	# pth.with_suffix('.json').save(u.to_json())
+	
+	# plt.figure()
+	# u.plot()
+	# plt.show()
