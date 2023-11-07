@@ -76,13 +76,33 @@ class Polygon() :
 		for cx, cy in self.box_array :
 			yield cx, cy
 
+	def ventilate_vertex(self, i) :
+		""" return the unwrapped angles computed for each points of the polygon
+		the first point returned is the first one after i (trigo way)
+		"""
+		ax, ay = self[i]
+
+		m_arr = np.arctan2(self.y_arr - ay, self.x_arr - ax)
+		w_arr = np.unwrap(np.hstack((m_arr[i+1:], m_arr[:i])))
+
+		return w_arr
+
+	def ventilate_point(self, A) :
+		""" return the unwrapped angles computed between A and each points of the polygon
+		"""
+		ax, ay = A
+
+		m_arr = np.arctan2(self.y_arr - ay, self.x_arr - ax)
+		w_arr = np.unwrap(m_arr)
+
+		return w_arr
+
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--')
 		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
 	def is_outside(self, A) :
-		
-
+		pass
 
 	def is_obstacle(self, A, B) :
 		""" test if the segment A, B is blocked by the polygon """

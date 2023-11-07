@@ -18,9 +18,9 @@ class RasterMap() :
 		[32, 64, 128]
 	])
 
-	jump_index = {
-		11: (0, -1), 15: (0, -1), 22: (-1, 0), 23: (-1, -1), 31: (0, -1), 43: (1, -1), 47: (1, -1),
-		63: (1, -1), 104: (1, 0), 105: (1, 0), 107: (1, 0), 111: (1, 0), 150: (-1, 0), 151: (-1, -1),
+	jump_index = { # clockwize : row, col relative to the matrix
+		2: (-1, 0), 9: (0, -1), 11: (0, -1), 15: (0, -1), 22: (-1, 0), 23: (-1, -1), 27: (0, -1), 31: (0, -1), 43: (1, -1), 47: (1, -1),
+		63: (1, -1), 64: (1, 0), 104: (1, 0), 105: (1, 0), 107: (1, 0), 111: (1, 0), 150: (-1, 0), 151: (-1, -1),
 		159: (0, -1), 191: (1, -1), 208: (0, 1), 212: (-1, 1), 214: (-1, 0), 215: (-1, -1), 232: (1, 1), 233: (1, 1),
 		235: (1, 1), 240: (0, 1), 244: (-1, 1), 246: (-1, 0), 247: (-1, -1), 248: (0, 1), 249: (0, 1), 252: (-1, 1)
 	}
@@ -70,9 +70,11 @@ class RasterMap() :
 			p = ext[r:r+3,c:c+3]
 			try :
 				i, j = self.jump_index[np.sum(p * self.jump_factor)]
+				print(p, np.sum(p * self.jump_factor), i, j, r, c)
 			except KeyError :
-				print("ERR: next step unknown\n", p, np.sum(p * self.jump_factor), i, j)
+				print("ERR: next step unknown\n", p, np.sum(p * self.jump_factor), r, c)
 				plt.imshow(self.lvl)
+				plt.plot(x_lst, y_lst, '--', color="tab:red")
 				plt.plot([c,], [r,], '+')
 				plt.show()
 				sys.exit(0)

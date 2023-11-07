@@ -14,21 +14,18 @@ class Piece() :
 	def __init__(self, orig:Polygon) :
 		self.orig = orig
 
-		self.z_arr = np.zeros((len(self.orig),), dtype=np.int8)
-
 		self.compute_convex()
 		self.compute_concave()
 
 	def __len__(self) :
-		return len(self.z_arr)
+		return len(self.orig)
 	
 	def to_json(self) :
 		return {
 			'orig' : self.orig.to_json(),
 			'convex' : self.convex.to_json(),
-			'concave' : {
-				f"{k[0]}/{k[1]}" : v.to_json() for k, v in self.concave.items()
-			}
+			'concave' : list(self.concave),
+			'enclave' : list(self.o_arr)
 		}
 	
 	def plot(self) :
@@ -46,23 +43,29 @@ class Piece() :
 		plt.show()
 
 	def compute_convex(self) :
-		for i, A in enumerate(self.orig) :
-			m_arr = np.arctan2(self.orig.y_arr - A[1], self.orig.x_arr - A[0])
-			u_arr = np.unwrap(np.hstack((m_arr[i+1:], m_arr[:i])))
+		self.z_arr = np.zeros((len(self.orig),), dtype=np.int8)
+
+		o_lst = list()
+		for i in range(len(self.orig)) :
+			u_arr = self.orig.ventilate_vertex(i)
 			u_min = np.nanmin(u_arr)
 			u_max = np.nanmax(u_arr)
 			self.z_arr[i] = (u_max - u_min) < math.pi
+			if math.tau <= (u_max - u_min) :
+				o_lst.append(i)
+		self.o_arr = np.array(o_lst)
+
 		self.convex = Polygon(p_arr=self.orig.p_arr[self.z_arr != 0,:])
 
 	def compute_concave(self) :
-		self.concave = dict()
+		self.concave = list()
 		for i in range(0, len(self)) :
 			m = self.z_arr[(i+1) % len(self)] - self.z_arr[i % len(self)]
 			if m < 0 :
 				a = i
 			if m > 0 :
-				b = i + 2
-				self.concave[(a, b)] = Polygon(* self.orig[a:b])
+				b = i + 1
+				self.concave.append((a, b))
 
 	def _prep_sort(self) :
 		self.convex = Polygon(
