@@ -55,7 +55,7 @@ class Polygon() :
 		if isinstance(i, int) :
 			return self.p_arr[i % len(self),:]
 		elif isinstance(i, slice) :
-			return np.array([self[j] for j in range(i.stop)[i]]).T
+			return np.array([self[j] for j in range(i.stop)[i]])
 		raise NotImplementedError(f"{type(i)}")
 		
 	def __iter__(self) :
@@ -185,18 +185,19 @@ class Polygon() :
 
 		return np.array(m_lst)
 	
-	def to_polar(self, A) :
+	def to_polar(self, A, B=None) :
 		""" return the polygon expressed as an angle (m_arr in radian) and a distance (d_arr)
 		from a given point """
-		# if B is None :
-		# 	B = self.p_arr[0,:]
 
-		(ax, ay), mx, my = A, self.x_arr, self.y_arr
-		# e = math.sqrt((bx - ax)**2 + (by - ay)**2)
-		# k = math.atan2(by - ay, bx - ax)
+		ax, ay = A
+		mx, my = self.x_arr, self.y_arr
 		
-		d_arr = np.sqrt((self.x_arr - ax)**2 + (self.y_arr - ay)**2)
-		m_arr = np.arctan2(my - ay, mx - ax)
+		d_arr = np.sqrt((mx - ax)**2 + (my - ay)**2)
+		m_arr = np.unwrap(np.arctan2(my - ay, mx - ax))
+
+		if B is not None :
+			bx, by = B
+			m_arr -= math.atan2(by - ay, bx - ax)
 		
 		return m_arr, d_arr
 

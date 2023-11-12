@@ -18,12 +18,12 @@ if __name__ == "__main__" :
 
 	u = Layer().load_rastermap(pth)
 
-	print(u.g_lst[0].o_arr)
+	pth.with_suffix('.json').save(u.to_json())
+
 	# print(u.g_lst[0].orig.p_arr[u.g_lst[0].o_arr])
 
 	plt.figure()
 	plt.plot(u.g_lst[0].orig.x_arr, u.g_lst[0].orig.y_arr, '+--')
-	#plt.plot(u.g_lst[0].orig.x_arr[u.g_lst[0].z_arr != 0], u.g_lst[0].orig.y_arr[u.g_lst[0].z_arr != 0], "+--")
 	plt.plot(u.g_lst[0].convex.x_arr, u.g_lst[0].convex.y_arr, 'x-')
 	plt.plot(u.g_lst[0].orig.p_arr[u.g_lst[0].o_arr,0], u.g_lst[0].orig.p_arr[u.g_lst[0].o_arr,1], 'o')
 	for a, b in u.g_lst[0].concave :
@@ -34,7 +34,6 @@ if __name__ == "__main__" :
 	plt.axis("equal")
 	plt.show()
 
-	# pth.with_suffix('.json').save(u.to_json())
 	
 	# plt.figure()
 	# u.plot()

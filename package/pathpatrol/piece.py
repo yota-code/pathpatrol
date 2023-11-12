@@ -25,7 +25,7 @@ class Piece() :
 			'orig' : self.orig.to_json(),
 			'convex' : self.convex.to_json(),
 			'concave' : list(self.concave),
-			'enclave' : list(self.o_arr)
+			'enclave' : list(int(o) for o in self.o_arr)
 		}
 	
 	def plot(self) :
@@ -50,9 +50,9 @@ class Piece() :
 			u_arr = self.orig.ventilate_vertex(i)
 			u_min = np.nanmin(u_arr)
 			u_max = np.nanmax(u_arr)
-			self.z_arr[i] = (u_max - u_min) < math.pi
+			self.z_arr[int(i)] = (u_max - u_min) < math.pi
 			if math.tau <= (u_max - u_min) :
-				o_lst.append(i)
+				o_lst.append(int(i))
 		self.o_arr = np.array(o_lst)
 
 		self.convex = Polygon(p_arr=self.orig.p_arr[self.z_arr != 0,:])

@@ -21,6 +21,9 @@ class Layer() :
 
 	def __init__(self) :
 		pass
+
+	def __getitem__(self, k) :
+		return self.g_lst[k]
 	
 	def __repr__(self) :
 		return repr(self.g_lst)
