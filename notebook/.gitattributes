@@ -1,5 +1,1 @@
-	*.ipynb filter=strip-notebook-output
-	EOT
-
-	git add notebook/.gitattributes
-	
+*.ipynb filter=strip-notebook-output

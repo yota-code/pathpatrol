@@ -27,12 +27,12 @@ bx, by = B
 
 c_gon = u[0].orig
 
-w_arr = mods((np.arctan2(c_gon.y_arr - ay, c_gon.x_arr - ax) - math.atan2(by - ay, bx - ax)))
-plt.plot(w_arr / np.max(np.absolute(w_arr)))
+# w_arr = mods((np.arctan2(c_gon.y_arr - ay, c_gon.x_arr - ax) - math.atan2(by - ay, bx - ax)))
+# plt.plot(w_arr / np.max(np.absolute(w_arr)))
 w_arr = (((bx - ax) * (c_gon.y_arr - ay)) - ((by - ay) * (c_gon.x_arr - ax)))
-plt.plot(w_arr / np.max(np.absolute(w_arr)))
-plt.grid()
-plt.show()
+# plt.plot(w_arr / np.max(np.absolute(w_arr)))
+# plt.grid()
+# plt.show()
 
 i_map = dict()
 w_prev = w_arr[0]

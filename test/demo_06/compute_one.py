@@ -91,7 +91,6 @@ for i in range(len(e_gon)) :
 	else :
 		plt.text(e_gon.x_arr[i] + 0.1, e_gon.y_arr[i] + 0.1, f"{i}", color="tab:blue")
 
-
 plt.plot(e_gon.x_arr, e_gon.y_arr, '+--')
 plt.axis('equal')
 plt.plot(e_gon.x_arr[r], e_gon.y_arr[r], 'o')
