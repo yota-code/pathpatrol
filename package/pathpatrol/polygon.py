@@ -16,15 +16,15 @@ class Polygon() :
 
 	""" a closed line """
 
-	def __init__(self, x_lst=None, y_lst=None, p_arr=None) :
+	def __init__(self, * pos) :
 
-		""" the line formed by x_lst and y_lst turn in the trigonometric way in a direct (Oxy) frame """
-		if x_lst is not None and y_lst is not None and (len(x_lst) == len(y_lst)) :
-			self.p_arr = np.array([(x, y) for x, y in zip(x_lst, y_lst)], dtype=np.float64)
-		elif p_arr is not None :
-			self.p_arr = p_arr
-		else :
-			raise ValueError
+		if len(pos) == 2 :
+			x_lst, y_lst = pos
+			if len(x_lst) == len(y_lst) :
+				self.p_arr = np.array([(x, y) for x, y in zip(x_lst, y_lst)], dtype=np.float64)
+
+		if len(pos) == 1 :
+			self.p_arr = pos[0]
 		
 		self.box = Polybox(
 			np.min(self.x_arr), np.max(self.x_arr),
@@ -52,11 +52,12 @@ class Polygon() :
 		return [list(self.x_arr), list(self.y_arr)]
 
 	def __getitem__(self, i) :
-		if isinstance(i, int) :
-			return self.p_arr[i % len(self),:]
-		elif isinstance(i, slice) :
-			return np.array([self[j] for j in range(i.stop)[i]])
-		raise NotImplementedError(f"{type(i)}")
+		return self.p_arr[i]
+		# if isinstance(i, int) :
+		# 	return self.p_arr[i % len(self),:]
+		# elif isinstance(i, slice) :
+		# 	return np.array([self[j] for j in range(i.stop)[i]])
+		# raise NotImplementedError(f"{type(i)}")
 		
 	def __iter__(self) :
 		for p in self.p_arr :
@@ -75,6 +76,19 @@ class Polygon() :
 	def iter_boxcorner(self) :
 		for cx, cy in self.box_array :
 			yield cx, cy
+
+	def convexity(self) :
+		""" return for each point the angle blocked by the other points
+		if the angle blocked is stricly lower than pi, the point is a convex vertex
+		if the angle blocked is higher than tau, the point is enclaved 
+		"""
+		c_lst = list()
+		for i in range(len(self)) :
+			u_arr = self.ventilate_vertex(i)
+			u_min = np.min(u_arr)
+			u_max = np.max(u_arr)
+			c_lst.append(u_max - u_min)
+		return np.array(c_lst)
 
 	def ventilate_vertex(self, i) :
 		""" return the unwrapped angles computed for each points of the polygon
@@ -99,6 +113,8 @@ class Polygon() :
 
 	def plot(self) :
 		plt.plot(self.x_arr, self.y_arr, '+--')
+		# for i, (x, y) in enumerate(self) :
+		# 	plt.text(x+0.1, y+0.1, str(i), color="tab:blue")
 		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
 	def is_outside(self, A) :

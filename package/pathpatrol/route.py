@@ -10,18 +10,30 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
-class SegTyp(enum.IntEnum):
+"""
+un point peut-être libre ou bien attaché à un des bords, dans le sens trigo ou anti trigo
+
+"""
+
+class PointTyp(enum.IntEnum):
     UNKNOWN = 0
     CLEAR = 1
     BORDER = 2
+    PIECE = 3
+    
+class Point() :
+	def __init__(self) :
+		pass
+
+	def from_coordinates(self, px, py) :
+		self.px, self.py = px, py
 
 Segment = collections.namedtuple('segment', ['from', 'to', 'segtyp'])
 
 class Route() :
-	def __init__(self, A, B, p_lst) :
-		self.p_lst = p_lst
-		self.r_lst = [Segment(A, B, SegTyp.UNKNOWN)]
-
+	def __init__(self, layer) :
+		self.layer = layer
+		self.route = list()
 		while True : # any([r.segtyp == SegTyp.UNKNOWN for r in self.r_lst]) :
 			for i, r in enumerate(self.r_lst) :
 				if r.segtyp == SegTyp.UNKNOWN :
@@ -31,3 +43,9 @@ class Route() :
 			else :
 				break
 
+	def compute(self, A, B) :
+		self.route = [(A, B)]
+
+
+	def point_from_coordinates(self, px, py) :
+		
