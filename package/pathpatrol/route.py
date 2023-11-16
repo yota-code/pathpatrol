@@ -15,12 +15,8 @@ un point peut-être libre ou bien attaché à un des bords, dans le sens trigo o
 
 """
 
-class PointTyp(enum.IntEnum):
-    UNKNOWN = 0
-    CLEAR = 1
-    BORDER = 2
-    PIECE = 3
-    
+
+	
 class Point() :
 	def __init__(self) :
 		pass

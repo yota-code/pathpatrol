@@ -76,11 +76,11 @@ right_lst.append(B)
 left_arr = np.array(left_lst)
 right_arr = np.array(right_lst)
 
-left_gon = Polygon(p_arr=left_arr)
-right_gon = Polygon(p_arr=right_arr)
+left_gon = Polygon(left_arr)
+right_gon = Polygon(right_arr)
 
-l_gon = Polygon(p_arr=left_arr[left_gon.convexity() < math.pi])
-r_gon = Polygon(p_arr=right_arr[right_gon.convexity() < math.pi])
+l_gon = Polygon(left_arr[left_gon.convexity() < math.pi])
+r_gon = Polygon(right_arr[right_gon.convexity() < math.pi])
 
 """
 il faut maintenant calculer les intersections de chacun de ces segments, les exprimer entre A et B (0.0 et 1.0)

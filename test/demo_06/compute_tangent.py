@@ -40,9 +40,6 @@ def is_freepath(h_gon, a, b) :
 		ux, uy = dx - cx, dy - dx
 		ma = (ax - cx) * uy - (ay - cy) * ux
 		mb = (bx - cx) * uy - (by - cy) * ux
-
-
-
 		cx, cy = dx, dy
 
 pth = Path("map.png")

@@ -12,11 +12,14 @@ from cc_pathlib import Path
 
 Polybox = collections.namedtuple('Polybox', ['left', 'right', 'below', 'above'])
 
+
 class Polygon() :
 
 	""" a closed line """
 
-	def __init__(self, * pos) :
+	def __init__(self, * pos, is_convex=False) :
+
+		self.is_convex = is_convex
 
 		if len(pos) == 2 :
 			x_lst, y_lst = pos
@@ -41,20 +44,20 @@ class Polygon() :
 	
 	@property
 	def box_array(self) :
-		return np.array([
+		return Polygon(np.array([
 			(self.box.left, self.box.below),
 			(self.box.right, self.box.below),
 			(self.box.right, self.box.above),
 			(self.box.left, self.box.above)
-		])
+		]), is_convex=True)
 	
 	def to_json(self) :
 		return [list(self.x_arr), list(self.y_arr)]
 
 	def __getitem__(self, i) :
+		if isinstance(i, int) :
+			return self.p_arr[i % len(self),:]
 		return self.p_arr[i]
-		# if isinstance(i, int) :
-		# 	return self.p_arr[i % len(self),:]
 		# elif isinstance(i, slice) :
 		# 	return np.array([self[j] for j in range(i.stop)[i]])
 		# raise NotImplementedError(f"{type(i)}")
@@ -117,8 +120,10 @@ class Polygon() :
 		# 	plt.text(x+0.1, y+0.1, str(i), color="tab:blue")
 		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
-	def is_outside(self, A) :
-		pass
+	def is_inside_box(self, A) :
+		""" return True if A is outside the box enclosing the polygon """
+		ax, ay = A
+		return self.box.left <= ax <= self.box.right and self.box.below <= ay <= self.box.above
 
 	def is_obstacle(self, A, B) :
 		""" test if the segment A, B is blocked by the polygon """
@@ -146,7 +151,7 @@ class Polygon() :
 
 		return k1, k2
 	
-	def is_inside(self, A) :
+	def is_inside_shape(self, A) :
 		""" return True if point A is inside the Polygon """
 		x_min, x_max, y_min, y_max = self.box
 
@@ -169,7 +174,7 @@ class Polygon() :
 		""" useful only for pixel based contours """
 		p_lst = [self[0],]
 		move_pre = (0, 0)
-		for i in range(1, len(self)) :
+		for i in range(1, len(self)+1) :
 			x0, y0 = self[i-1]
 			x1, y1 = self[i]
 			move_cur = (x1 - x0, y1 - y0)
@@ -180,8 +185,8 @@ class Polygon() :
 			move_pre = move_cur
 
 		return self.__class__(
-			list(itertools.accumulate([x for x, y in p_lst])),
-			list(itertools.accumulate([y for x, y in p_lst]))
+			list(itertools.accumulate([x for x, y in p_lst[:-1]])),
+			list(itertools.accumulate([y for x, y in p_lst[:-1]]))
 		)
 
 	def ventilate(self, M) :

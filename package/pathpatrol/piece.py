@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from cc_pathlib import Path
 
 from pathpatrol.polygon import Polygon
+from pathpatrol.common import PointTyp
 
 class Piece() :
 	def __init__(self, orig:Polygon) :
@@ -25,37 +26,63 @@ class Piece() :
 			'orig' : self.orig.to_json(),
 			'convex' : self.convex.to_json(),
 			'concave' : list(self.concave),
-			'enclave' : list(int(o) for o in self.o_arr)
+			'enclave' : self.o_set
 		}
 	
+	def get_point_type(self, A) :
+		""" return the type of point relative to this piece """
+
+		if not self.orig.is_inside_box(A) :
+			# the point is oustside the box 
+			return PointTyp.OUTSIDE, None
+		
+		w_arr = self.orig.ventilate_point(A)
+		angle = np.max(w_arr) - np.min(w_arr)
+
+		if angle < math.pi :
+			# the point is outside the convex hull
+			return PointTyp.OUTSIDE, None
+		elif math.pi <= angle < math.tau :
+			# the point is outside the shape, but not the convex hull
+			return PointTyp.CRATER, None
+		else :
+			# the point is either in a cavity or inside the shape
+			for i, (a, b) in enumerate(self.concave) :
+				if self.is_enclave(a, b) :
+					e_gon = Polygon(self.orig[a:b+1])
+					if e_gon.is_inside_box(A) and e_gon.is_inside_shape(A) :
+						return PointTyp.CAVITY, i
+
+			return PointTyp.IMPOSSIBLE, None
+		
+	def is_enclave(self, a, b) :
+		return bool(set(range(a+1, b)) ^ self.o_set)
+
 	def plot(self) :
-		plt.plot(self.orig.x_arr, self.orig.y_arr, '+--', color="tab:blue")
-		print(self.m_arr)
-		print(np.where(self.m_arr == 0))
-		print(self.orig.x_arr[np.where(self.m_arr== 0)])
-		plt.plot(self.convex.x_arr, self.convex.y_arr, 'x-', color="tab:green", linewidth=3, alpha=0.5)
+		plt.fill(self.orig.x_arr, self.orig.y_arr, color="tab:blue", alpha=0.5)
+		plt.plot(self.orig.x_arr, self.orig.y_arr, "+--", color="tab:blue", alpha=0.5)
+		plt.plot(self.convex.x_arr, self.convex.y_arr, '+--', color="tab:green", linewidth=3, alpha=0.5)
 		plt.plot(self.orig.x_arr[0], self.orig.y_arr[0], '+', color="tab:red")
-		for k, v in self.concave.items() :
-			print(k, v.x_arr, v.y_arr)
-			plt.plot(v.x_arr, v.y_arr)
-		plt.grid()
-		plt.axis("equal")
-		plt.show()
+		# for k, v in self.concave.items() :
+		# 	print(k, v.x_arr, v.y_arr)
+		# 	plt.plot(v.x_arr, v.y_arr)
+		# plt.grid()
+		# plt.axis("equal")
+		# plt.show()
 
 	def compute_convex(self) :
 		self.z_arr = np.zeros((len(self.orig),), dtype=np.int8)
 
-		o_lst = list()
+		self.o_set = set()
 		for i in range(len(self.orig)) :
 			u_arr = self.orig.ventilate_vertex(i)
 			u_min = np.nanmin(u_arr)
 			u_max = np.nanmax(u_arr)
 			self.z_arr[int(i)] = (u_max - u_min) < math.pi
 			if math.tau <= (u_max - u_min) :
-				o_lst.append(int(i))
-		self.o_arr = np.array(o_lst)
+				self.o_set.add(int(i))
 
-		self.convex = Polygon(p_arr=self.orig.p_arr[self.z_arr != 0,:])
+		self.convex = Polygon(self.orig.p_arr[self.z_arr != 0,:], is_convex=True)
 
 	def compute_concave(self) :
 		self.concave = list()
@@ -79,7 +106,7 @@ class Piece() :
 				a = i
 			if m < 0 :
 				b = i + 2
-				self.cavity[(a, b)] = Polygon(* self.orig[a:b])
+				self.cavity[(a, b)] = Polygon(self.orig[a:b,:])
 
 	def _prep_cut(self) :
 		"""

@@ -69,9 +69,10 @@ class Layer() :
 
 	def plot(self) :
 		# plt.figure()
-		for g in self.g_lst :
-			g.orig.plot()
-			g.convex.plot()
+		for piece in self :
+			piece.plot()
+			# g.orig.plot()
+			# g.convex.plot()
 		#for i, j, p, q, w in self.r_lst :
 		#	a, b = self.g_lst[i].convex, self.g_lst[j].convex
 		#	plt.plot([a[p][0], b[q][0]], [a[p][1], b[q][1]], color=self.c_map[w])
