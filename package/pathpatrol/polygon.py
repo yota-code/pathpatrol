@@ -12,7 +12,6 @@ from cc_pathlib import Path
 
 Polybox = collections.namedtuple('Polybox', ['left', 'right', 'below', 'above'])
 
-
 class Polygon() :
 
 	""" a closed line """
@@ -20,6 +19,8 @@ class Polygon() :
 	def __init__(self, * pos, is_convex=False) :
 
 		self.is_convex = is_convex
+
+		self._c_arr = None # cached convexity array
 
 		if len(pos) == 2 :
 			x_lst, y_lst = pos
@@ -43,7 +44,16 @@ class Polygon() :
 		return self.p_arr[:,1]
 	
 	@property
-	def box_array(self) :
+	def box_arr(self) :
+		return np.array([
+			(self.box.left, self.box.below),
+			(self.box.right, self.box.below),
+			(self.box.right, self.box.above),
+			(self.box.left, self.box.above)
+		])
+	
+	@property
+	def box_as_polygon(self) :
 		return Polygon(np.array([
 			(self.box.left, self.box.below),
 			(self.box.right, self.box.below),
@@ -85,13 +95,20 @@ class Polygon() :
 		if the angle blocked is stricly lower than pi, the point is a convex vertex
 		if the angle blocked is higher than tau, the point is enclaved 
 		"""
-		c_lst = list()
-		for i in range(len(self)) :
-			u_arr = self.ventilate_vertex(i)
-			u_min = np.min(u_arr)
-			u_max = np.max(u_arr)
-			c_lst.append(u_max - u_min)
-		return np.array(c_lst)
+		if self._c_arr is None :
+			c_lst = list()
+			for i in range(len(self)) :
+				u_arr = self.ventilate_vertex(i)
+				u_min = np.min(u_arr)
+				u_max = np.max(u_arr)
+				c_lst.append(u_max - u_min)
+			self._c_arr = np.array(c_lst)
+		return self._c_arr
+	
+	def get_convex_hull(self) :
+		if self.is_convex :
+			return self
+		return Polygon(self.p_arr[self.convexity() < math.pi,:], is_convex=True)
 
 	def ventilate_vertex(self, i) :
 		""" return the unwrapped angles computed for each points of the polygon
@@ -121,10 +138,25 @@ class Polygon() :
 		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
 
 	def is_inside_box(self, A) :
-		""" return True if A is outside the box enclosing the polygon """
+		""" return True if A is inside the box enclosing the polygon """
 		ax, ay = A
 		return self.box.left <= ax <= self.box.right and self.box.below <= ay <= self.box.above
-
+	
+	def do_intersect_box(self, A, B) :
+		""" return True if A, B pass through the box enclosing the polygon """
+		(ax, ay), (bx, by) = A, B
+		b_gon = self.box_as_polygon()
+		w_arr = ((b_gon.x_arr - ax)*(by - ay)) - ((b_gon.y_arr - ay)*(bx - ax))
+		w_prev = w_arr[0]
+		for i, w in enumerate(w_arr[1:]) :
+			if w_prev * w < 0.0 :
+				(cx, cy), (dx, dy) = b_gon[i], b_gon[i+1]
+				d = (bx - ax)*(dy - cy) - (by - ay)*(dx - cx)
+				t = (ax*(cy - dy) + ay*(-cx + dx) + cx*dy - cy*dx) / d
+				if 0.0 <= t <= 1.0 :
+					return True
+		return False
+		
 	def is_obstacle(self, A, B) :
 		""" test if the segment A, B is blocked by the polygon """
 		(ax, ay), (bx, by) = A, B
@@ -135,6 +167,59 @@ class Polygon() :
 			if 0.0 <= k1 <= 1.0 and 0.0 <= k2 <= 1.0 :
 				return True
 		return False
+	
+	def scan_intersection(self, A, B) :
+		""" return a list of all segments of the polygon which intersect with AB
+		return also the position in AB (in [0;1]) and the way it is crossed (left to right or right to left)
+		"""
+
+		(ax, ay), (bx, by) = A, B
+
+		w_arr = ((self.x_arr - ax)*(by - ay)) - ((self.y_arr - ay)*(bx - ax))
+
+		i_lst = list()
+		w_prev = w_arr[0]
+		for i, w in enumerate(w_arr[1:]) :
+			if w_prev * w < 0.0 :
+				(cx, cy), (dx, dy) = self[i], self[i+1]
+				d = (bx - ax)*(dy - cy) - (by - ay)*(dx - cx)
+				t = (ax*(cy - dy) + ay*(-cx + dx) + cx*dy - cy*dx) / d
+				if 0.0 <= t <= 1.0 :
+					i_lst.append((i, t, True if w > 0 else False))
+			w_prev = w
+
+		""" si A et B sont bien en dehors du polygone, on doit avoir un nombre pair de traversées franches """
+		assert(len(i_lst) % 2 == 0)
+
+		return i_lst
+	
+	def cut(self, A, B, i_lst=None) :
+		if i_lst is None :
+			i_lst = self.scan_intersection(A, B)
+
+		(ax, ay), (bx, by) = A, B
+		left_lst, right_lst = [B,], [A,]
+
+		for k in range(len(i_lst) // 2) :
+			i0, t0, w0 = i_lst[2*k]
+			i1, t1, w1 = i_lst[2*k+1]
+
+			if w0 is False and w1 is True :
+				m = left_lst
+			elif w0 is True and w1 is False :
+				m = right_lst
+			else :
+				raise ValueError
+			
+			m.append((ax*(1 - t0) + bx*t0, ay*(1 - t0) + by*t0))
+			for j in range(i0+1, i1+1) :
+				m.append((self.x_arr[j], self.y_arr[j]))
+			m.append((ax*(1 - t1) + bx*t1, ay*(1 - t1) + by*t1))
+
+		left_lst.append(A)
+		right_lst.append(B)
+
+		return np.array(left_lst), np.array(reversed(right_lst))
 
 	def intersection(self, A, B, C, D) :
 		""" test if AB intersect CD, return the position of the intesection points or Math.Inf, if parrallel """

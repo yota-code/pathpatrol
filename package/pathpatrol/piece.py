@@ -42,18 +42,18 @@ class Piece() :
 		if angle < math.pi :
 			# the point is outside the convex hull
 			return PointTyp.OUTSIDE, None
-		elif math.pi <= angle < math.tau :
-			# the point is outside the shape, but not the convex hull
-			return PointTyp.CRATER, None
 		else :
 			# the point is either in a cavity or inside the shape
 			for i, (a, b) in enumerate(self.concave) :
-				if self.is_enclave(a, b) :
-					e_gon = Polygon(self.orig[a:b+1])
-					if e_gon.is_inside_box(A) and e_gon.is_inside_shape(A) :
-						return PointTyp.CAVITY, i
+				e_gon = Polygon(self.orig[a:b+1])
+				if e_gon.is_inside_box(A) and e_gon.is_inside_shape(A) :
+					return PointTyp.CRATER if angle < math.tau else PointTyp.CAVITY, i
 
 			return PointTyp.IMPOSSIBLE, None
+		
+	def carved_hull(self, c_lst) :
+		""" return the convex hull with only some special shapes carved, according to the list of cavities/craters c_lst"""
+		pass
 		
 	def is_enclave(self, a, b) :
 		return bool(set(range(a+1, b)) ^ self.o_set)
