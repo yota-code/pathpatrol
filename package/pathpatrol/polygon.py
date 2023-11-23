@@ -145,7 +145,7 @@ class Polygon() :
 	def do_intersect_box(self, A, B) :
 		""" return True if A, B pass through the box enclosing the polygon """
 		(ax, ay), (bx, by) = A, B
-		b_gon = self.box_as_polygon()
+		b_gon = self.box_as_polygon
 		w_arr = ((b_gon.x_arr - ax)*(by - ay)) - ((b_gon.y_arr - ay)*(bx - ax))
 		w_prev = w_arr[0]
 		for i, w in enumerate(w_arr[1:]) :
@@ -172,7 +172,6 @@ class Polygon() :
 		""" return a list of all segments of the polygon which intersect with AB
 		return also the position in AB (in [0;1]) and the way it is crossed (left to right or right to left)
 		"""
-
 		(ax, ay), (bx, by) = A, B
 
 		w_arr = ((self.x_arr - ax)*(by - ay)) - ((self.y_arr - ay)*(bx - ax))
@@ -185,11 +184,12 @@ class Polygon() :
 				d = (bx - ax)*(dy - cy) - (by - ay)*(dx - cx)
 				t = (ax*(cy - dy) + ay*(-cx + dx) + cx*dy - cy*dx) / d
 				if 0.0 <= t <= 1.0 :
-					i_lst.append((i, t, True if w > 0 else False))
+					i_lst.append((i, t, bool(0.0 < w)))
 			w_prev = w
 
 		""" si A et B sont bien en dehors du polygone, on doit avoir un nombre pair de traversées franches """
-		assert(len(i_lst) % 2 == 0)
+		# assert(len(i_lst) % 2 == 0)
+		""" mais c'est stupide de tester ça parce que si A ou B sont sur le polygone, ça ne marche plus """
 
 		return i_lst
 	
