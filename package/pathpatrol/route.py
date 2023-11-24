@@ -10,17 +10,49 @@ import matplotlib.pyplot as plt
 
 from cc_pathlib import Path
 
+from pathpatrol.polygon import Polygon
+
 """
 un point peut-être libre ou bien attaché à un des bords, dans le sens trigo ou anti trigo
 
 """
 
 class Point() :
-	def __init__(self) :
-		pass
+	# free point, or status unknown
+	def __init__(self, x, y) :
+		self.x = x
+		self.y = y
 
-	def from_coordinates(self, px, py) :
-		self.px, self.py = px, py
+	@property
+	def val(self) :
+		return (self.x, self.y)
+
+class Vertex() :
+	def __init__(self, layer, p, n) :
+		self.layer = layer
+		self.p = p
+		self.n = n
+
+	@property
+	def val(self) :
+		return self.layer[self.p].orig.p_arr[self.n,:]
+
+class Line() :
+	def __init__(self) :
+		self.p_lst = list()
+
+	def __iter__(self) :
+		for p in self.p_lst :
+			yield p
+
+	def push(self, p) :
+		self.p_lst.append(p)
+
+	def get_array(self) :
+		return np.array([p.val for p in self.p_lst])
+
+	def get_polygon(self) :
+		return Polygon(self.get_array())
 
 class Route() :
 	def __init__(self, layer) :
@@ -33,18 +65,18 @@ class Route() :
 			sans collision: True,
 			collision inconnue: None,
 		suit une bordure: False"""
-		self.route = [(A, B, None)]
+		self.route = [(Point(* A), Point(* B), None)]
 
 		while True :
 			for i, (A, B, status) in enumerate(self.route) :
 				if status is None :
 					# le status des collisions est inconnu, il faut fouiller
 					p, i_map = self.all_collisions(A, B)
-					print(p, i_map)
+					p_gon = self.layer[p].orig
 					i_lst = i_map[p]
 
 					plt.figure()
-					(ax, ay), (bx, by) = A, B
+					(ax, ay), (bx, by) = A.val, B.val
 					plt.plot([ax, bx], [ay, by])
 					self.layer[p].plot()
 					self.layer[0].plot()
@@ -52,52 +84,60 @@ class Route() :
 						[ax*(1 - t) + bx*t for i, t, w in i_lst],
 						[ay*(1 - t) + by*t for i, t, w in i_lst], 'o', color="tab:orange"
 					)
+
+
+					for w in [True, False] :
+						r_lin = self.go_around(A, B, p, i_lst, w)
+						r_gon = r_lin.get_polygon()
+						c_arr = r_gon.convexity()
+
+						plt.plot(
+							[r.val[0] for r in r_lin],
+							[r.val[1] for r in r_lin]
+						)
+						plt.plot(
+							[r.val[0] for r, c in zip(r_lin, c_arr) if c < math.pi],
+							[r.val[1] for r, c in zip(r_lin, c_arr) if c < math.pi]
+						)
+
 					plt.grid()
+					plt.axis("equal")
 					plt.show()
 
 					break
 			else :
 				break
+			break
 
-	def go_around(self, A, B, p_gon, i_lst) :
-		""" A et B ne doivent pas être dans p_gon ni appartenir à ses arrêtes ou ses sommets"""
-
-		(ax, ay), (bx, by) = A, B
-		left_lst, right_lst = [B,], [A,]
-
+	def go_around(self, A, B, p, i_lst, way) :
+		""" A et B ne doivent pas être dans p_gon ni appartenir à ses arrêtes ou ses sommets
+		i_lst c'est la liste des points d'intersection
+		way est égal à True pour un contournement par la droite, False pour la gauche
+		"""
+		r_lin = Line()
+		r_lin.push(B if way else A)
 		for k in range(len(i_lst) // 2) :
 			i0, t0, w0 = i_lst[2*k]
 			i1, t1, w1 = i_lst[2*k+1]
-
-			if w0 is False and w1 is True :
-				m = left_lst
-			elif w0 is True and w1 is False :
-				m = right_lst
-			else :
-				raise ValueError
-			
-
-			!!! le problème là c'est qu'il ne faut pas perdre l'information de savoir si c'est un pont (qu'il faudra à nouveau tester pour les collisions) ou s'il s'agit d'une arrête
-			surtout pendant l'étape suivant de simplification/convexification
-			
-			m.append((ax*(1 - t0) + bx*t0, ay*(1 - t0) + by*t0))
-			for j in range(i0+1, i1+1) :
-				m.append((p_gon.x_arr[j], p_gon.y_arr[j]))
-			m.append((ax*(1 - t1) + bx*t1, ay*(1 - t1) + by*t1))
-
-		left_lst.append(A)
-		right_lst.append(B)
-
-
-
+			if (w0 ^ way) is True and (w1 ^ way) is False :		
+				for i in range(i0+1, i1+1) :
+					r_lin.push(Vertex(self.layer, p, i))
+		r_lin.push(A if way else B)
+		if way :
+			r_lin.p_lst = r_lin.p_lst[::-1]
+		return r_lin
 
 	def all_collisions(self, A, B) :
 		i_map = dict()
 		first = (math.inf, None)
 		for p, piece in enumerate(self.layer) :
-			if not (piece.orig.is_inside_box(A) or piece.orig.is_inside_box(B) or piece.orig.do_intersect_box(A, B)) :
+			if not (
+				piece.orig.is_inside_box(A.val) or
+				piece.orig.is_inside_box(B.val) or
+				piece.orig.do_intersect_box(A.val, B.val)
+			) :
 				continue
-			i_lst = piece.orig.scan_intersection(A, B)
+			i_lst = piece.orig.scan_intersection(A.val, B.val)
 			if i_lst :
 				i_map[p] = i_lst
 				t_min = min(i[1] for i in i_lst)
