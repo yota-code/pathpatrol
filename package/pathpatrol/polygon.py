@@ -169,7 +169,8 @@ class Polygon() :
 		return False
 	
 	def scan_intersection(self, A, B) :
-		""" return a list of all segments of the polygon which intersect with AB
+		"""
+		return a list of all segments of the polygon which intersect with AB
 		return also the position in AB (in [0;1]) and the way it is crossed (left to right or right to left)
 		"""
 		(ax, ay), (bx, by) = A, B
@@ -184,7 +185,7 @@ class Polygon() :
 				d = (bx - ax)*(dy - cy) - (by - ay)*(dx - cx)
 				t = (ax*(cy - dy) + ay*(-cx + dx) + cx*dy - cy*dx) / d
 				if 0.0 <= t <= 1.0 :
-					i_lst.append((i, t, bool(0.0 < w)))
+					i_lst.append((t, i, bool(0.0 < w)))
 			w_prev = w
 
 		""" si A et B sont bien en dehors du polygone, on doit avoir un nombre pair de traversées franches """

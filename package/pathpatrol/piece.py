@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from cc_pathlib import Path
 
 from pathpatrol.polygon import Polygon
-from pathpatrol.common import PointTyp
+# from pathpatrol.common import PointTyp
 
 class Piece() :
 	def __init__(self, orig:Polygon) :

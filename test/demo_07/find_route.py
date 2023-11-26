@@ -24,9 +24,9 @@ B = (250.0, 240.0)
 
 u = Route(layer)
 
-# u.goaround_in(Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206))
+u.goaround_corner(Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206))
 
-u.compute(A, B)
+# u.compute(A, B)
 
 
 

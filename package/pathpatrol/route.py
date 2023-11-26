@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from cc_pathlib import Path
 
 from pathpatrol.polygon import Polygon
+from pathpatrol.common import *
 
 """
 un point peut-être libre ou bien attaché à un des bords, dans le sens trigo ou anti trigo
@@ -228,15 +229,103 @@ class Route() :
 				break
 
 
-	def goaround_in(self, A, B) :
+	def goaround_corner(self, A, B) :
 		plt.figure(figsize=(12, 12))
-		self.layer[0].plot()
 		(ax, ay), (bx, by) = A.val, B.val
-		plt.plot([ax, bx], [ay, by])
-		plt.grid()
-		plt.show()
+		plt.text(ax, ay, "A")
+		plt.text(bx, by, "B")
 
 
+		for P, Q, s in zip([A, B], [B, A], [0, -1]) :
+			if isinstance(P, Vertex) :
+				i_lst = self.collision(P, Q, P.p)
+				p_gon = self.layer[0].orig
+
+				t0, i0, w0 = i_lst[s]
+				(px, py), (qx, qy) = P.val, Q.val
+				plt.text(px+1, py, "P")
+				plt.text(qx+1, qy, "Q")
+
+				plt.plot(
+					[ax*(1 - t) + bx*t for t, i, w in i_lst],
+					[ay*(1 - t) + by*t for t, i, w in i_lst], 'v', color="tab:orange"
+				)
+				plt.plot(
+					[self.layer[0].orig.x_arr[i] for t, i, w in i_lst],
+					[self.layer[0].orig.y_arr[i] for t, i, w in i_lst], '^', color="tab:purple"
+				)
+
+				print(i0+1, P.n, w0)
+				j_lst = list()
+				for j in range(P.n+1, i0+1, 1 if P.n < i0 else -1) :
+					R = self.layer[P.p].orig[j]
+					rx, ry = R
+					u = angle_3pt(P.val, Q.val, R)
+					j_lst.append(u)
+					plt.text(p_gon.x_arr[j], p_gon.y_arr[j], f"{j}:{u:0.3f}")
+					plt.plot([rx,], [ry,], 'o', color="tab:green")
+
+				jj = P.n + np.argmax(np.absolute(np.array(j_lst))) + 1
+
+				print(j_lst, w0, jj)
+
+
+				self.layer[P.p].plot()
+				(ax, ay), (bx, by) = A.val, B.val
+				plt.plot([ax, bx], [ay, by])
+
+
+				plt.grid()
+				plt.show()
+
+				A = Vertex(self.layer, A.p, jj)
+
+
+	def sideshift(self, A, B) :
+		""" décalle le point A pour éviter qu'il ne passe à travers l'obstacle directement à partir de A """
+
+		def argmax(x):
+			return max(range(len(x)), key=lambda i: x[i])
+
+		if isinstance(A, Vertex) :
+			i_lst = self.collision(A, B, A.p) # compute a list of collisions with the polygon on which A is a Vertex
+			p_gon = self.layer[A.p].orig
+
+			t0, i0, z0 = i_lst[0] # return the closest collision
+
+			w = 1 if A.n < i0 else -1
+			j_lst = list() # list des points après A et avant la première collision
+			for j in range(A.n + w, i0 + w, w) :
+				M = p_gon[j]
+				u = angle_3pt(A.val, B.val, M)
+				if not j_lst : # this is the first point, we check that A need to be shifted
+					if z0 : # crossing from right to left
+						raise NotImplementedError(f"A={A} B={B} u={u} t0={t0} i0={i0} z0={z0}")
+					else :
+						if u < 0.0 :
+							return 0, A, B
+				j_lst.append(abs(u))
+			d = argmax(j_lst) + 1
+
+			n_lst = Line()
+			for j in range(0, d+1) :
+				n_lst.push(Vertex(self.layer, A.p, A.n j))
+			n_gon = n_lst.get_polygon()
+			c_arr = n_gon.convexity()
+
+
+			return d, Vertex(self.layer, A.p, A.n + d), B
+
+
+	def collision(self, A, B, p) :
+		p_gon = self.layer[p].orig
+		if not (
+			p_gon.is_inside_box(A.val) or
+			p_gon.is_inside_box(B.val) or
+			p_gon.do_intersect_box(A.val, B.val)
+		) :
+			return list()
+		return sorted(p_gon.scan_intersection(A.val, B.val))
 
 	def go_around(self, A, B, p, i_lst, way) :
 		""" A et B ne doivent pas être dans p_gon ni appartenir à ses arrêtes ou ses sommets
@@ -255,6 +344,18 @@ class Route() :
 		if way :
 			r_lin.p_lst = r_lin.p_lst[::-1]
 		return r_lin
+	
+	def collision(self, A, B, p) :
+		p_gon = self.layer[p].orig
+		if not (
+			p_gon.is_inside_box(A.val) or
+			p_gon.is_inside_box(B.val) or
+			p_gon.do_intersect_box(A.val, B.val)
+		) :
+			return list()
+		return sorted(p_gon.scan_intersection(A.val, B.val))
+
+
 
 	def all_collisions(self, A, B) :
 		i_map = dict()
