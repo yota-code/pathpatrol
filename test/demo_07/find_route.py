@@ -11,14 +11,21 @@ from cc_pathlib import Path
 
 from pathpatrol.layer import Layer
 from pathpatrol.polygon import Polygon
-from pathpatrol.route import Route
+from pathpatrol.route import Route, Point, Vertex
 
 layer = Layer().load_rastermap('map.png')
 
-A = (40, 40)
-B = (250, 240)
+layer.g_lst = [layer.g_lst[0],]
+
+A = (40.0, 40.0)
+B = (250.0, 240.0)
+
+
 
 u = Route(layer)
+
+# u.goaround_in(Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206))
+
 u.compute(A, B)
 
 
