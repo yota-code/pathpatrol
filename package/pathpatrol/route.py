@@ -17,6 +17,16 @@ from pathpatrol.common import *
 un point peut-être libre ou bien attaché à un des bords, dans le sens trigo ou anti trigo
 """
 
+Path("route.log").write_text('')
+
+def log(txt) :
+	with Path("route.log").open('at') as fid :
+		fid.write(str(txt) + '\n')
+
+def argmax(x):
+	return max(range(len(x)), key=lambda i: x[i])
+
+	
 class Point() :
 	# free point, or status unknown
 	def __init__(self, x, y) :
@@ -66,6 +76,9 @@ class Line() :
 	def get_polygon(self) :
 		return Polygon(self.get_array())
 	
+	def __repr__(self) :
+		return '[\n' + '\n'.join(f"\t{p}" for p in self.p_lst) + '\n]'
+	
 class RouteMap() :
 	def __init__(self) :
 		self.r_map = dict()
@@ -73,6 +86,7 @@ class RouteMap() :
 	def push(self, A, B, status=None) :
 		r = (A, B)
 		if r not in self.r_map or status is not None :
+			log(f"RouteMap.push({A}, {B}, {status}) new route: {r not in self.r_map}")
 			self.r_map[r] = status
 
 	def pop(self, r) :
@@ -97,7 +111,8 @@ class RouteMap() :
 class Route() :
 	def __init__(self, layer) :
 		self.layer = layer
-		self.route = list()
+		self.route = RouteMap()
+
 
 	def compute(self, from_point, to_point) :
 		""" point de départ, point d'arrivée,
@@ -231,10 +246,26 @@ class Route() :
 
 	def goaround_corner(self, A, B) :
 		plt.figure(figsize=(12, 12))
+		p_gon = self.layer[0].orig
 		(ax, ay), (bx, by) = A.val, B.val
-		plt.text(ax, ay, "A")
-		plt.text(bx, by, "B")
+		plt.text(ax+0.1, ay, "A")
+		# for i in range(len(p_gon)) :
+		# 	plt.text(p_gon.x_arr[i], p_gon.y_arr[i] + 0.2, str(i))
+		plt.text(bx+0.1, by, "B")
+		plt.plot([ax, bx], [ay, by])
+		self.layer[0].plot()
 
+		d0, A, B = self.sidestep(A, B)
+		# d1, B, A = self.sidestep(B, A)
+
+		(ax, ay), (bx, by) = A.val, B.val
+		plt.plot([ax, bx], [ay, by])
+
+		plt.grid()
+		plt.axis("equal")
+		plt.show()
+
+		return
 
 		for P, Q, s in zip([A, B], [B, A], [0, -1]) :
 			if isinstance(P, Vertex) :
@@ -281,40 +312,95 @@ class Route() :
 				A = Vertex(self.layer, A.p, jj)
 
 
-	def sideshift(self, A, B) :
+	def follow_edge(self, A, B) :
+		""" extract the succession of points which goes from A to B following the egde (A and B must be vertices of the same polygon) """
+
+		log(f">>> follow_edge({A}, {B}")
+
+		if not ( isinstance(A, Vertex) and isinstance(B, Vertex) and A.p == B.p ) :
+			return
+
+		p_gon = self.layer[A.p].orig
+		r_lin = Line()
+		w = 1 if A.n < B.n else -1
+		for i in range(A.n, B.n+1, w) : # collect all points form A to B in a line
+			r_lin.push(Vertex(self.layer, A.p, i))
+
+		log(f"<-- {r_lin}")
+
+		return r_lin, w
+
+	def push_convex_line(self, r_lin) :
+		""" take a succession of vertices and points and add a convex path to the route """
+		r_gon = r_lin.get_polygon()
+		c_arr = r_gon.convexity()
+
+		log(r_gon)
+		log(c_arr)
+
+		ne marche pas de manière générale, il faut absolument savoir de quel côté est le polygone pour faire correctement le travail
+
+		prev = None
+		for next, c in zip(r_lin, c_arr) :
+			if prev is None :
+				prev = next
+			elif c < math.pi :
+				m = None 
+				if isinstance(prev, Vertex) and isinstance(next, Vertex) and abs(prev.n - next.n) == 1 : # if the egde is between two consecutive vertices
+					m = False # don't bother to compute a collision
+				self.route.push(prev, next, m)
+				prev = next
+
+	def sidestep(self, A, B) :
 		""" décalle le point A pour éviter qu'il ne passe à travers l'obstacle directement à partir de A """
 
-		def argmax(x):
-			return max(range(len(x)), key=lambda i: x[i])
+		log(f"sidestep({A}, {B})")
 
-		if isinstance(A, Vertex) :
+		if isinstance(A, Vertex) : # si A n'est pas un sommet, on sort direct
 			i_lst = self.collision(A, B, A.p) # compute a list of collisions with the polygon on which A is a Vertex
+			if not i_lst :
+				return -1, A, B # ça serait bien de signaler si on sait directement qu'il n'y a pas de collision entre A et B afin d'accélérer la suite
+			
 			p_gon = self.layer[A.p].orig
-
 			t0, i0, z0 = i_lst[0] # return the closest collision
 
 			w = 1 if A.n < i0 else -1
+			log(f"\tA.n={A.n} t0={t0} i0={i0} z0={z0} w={w}")
+
+			# on regarde le premier point qui suit, dans la direction de la collision
+
+			M = p_gon[A.n + w]
+			u = angle_3pt(A.val, B.val, M)
+			# on vérifie que le cas n'est pas trivial, et qu'il n'y aurait pas besoin de faire de sidestep (si AB ne traverse pas directement le polygone en A)
+			if z0 : # crossing from right to left
+				raise NotImplementedError(f"A={A} B={B} u={u} t0={t0} i0={i0} z0={z0}")
+			else :
+				if u < 0.0 :
+					pass
+				else :
+					return 0, A, B
+
+
 			j_lst = list() # list des points après A et avant la première collision
 			for j in range(A.n + w, i0 + w, w) :
 				M = p_gon[j]
-				u = angle_3pt(A.val, B.val, M)
-				if not j_lst : # this is the first point, we check that A need to be shifted
-					if z0 : # crossing from right to left
-						raise NotImplementedError(f"A={A} B={B} u={u} t0={t0} i0={i0} z0={z0}")
-					else :
-						if u < 0.0 :
-							return 0, A, B
+				u = angle_3pt(B.val, A.val, M)
+
+				plt.text(p_gon.x_arr[j], p_gon.y_arr[j] + 0.2, f"{j} / {u:0.4f}")
+
 				j_lst.append(abs(u))
+
+			log(f"j_lst={j_lst}")
+
 			d = argmax(j_lst) + 1
+			M = Vertex(self.layer, A.p, A.n + d)
 
-			n_lst = Line()
-			for j in range(0, d+1) :
-				n_lst.push(Vertex(self.layer, A.p, A.n j))
-			n_gon = n_lst.get_polygon()
-			c_arr = n_gon.convexity()
+			log(f"A={A} M={M}")
 
+			r_lin = self.follow_edge(A, M)
+			self.push_convex_line(r_lin)
 
-			return d, Vertex(self.layer, A.p, A.n + d), B
+			return d, M, B
 
 
 	def collision(self, A, B, p) :

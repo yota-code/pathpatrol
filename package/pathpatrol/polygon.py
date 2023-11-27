@@ -28,7 +28,7 @@ class Polygon() :
 				self.p_arr = np.array([(x, y) for x, y in zip(x_lst, y_lst)], dtype=np.float64)
 
 		if len(pos) == 1 :
-			self.p_arr = pos[0]
+			self.p_arr = np.array(pos[0])
 		
 		self.box = Polybox(
 			np.min(self.x_arr), np.max(self.x_arr),
@@ -43,8 +43,7 @@ class Polygon() :
 	def y_arr(self) :
 		return self.p_arr[:,1]
 	
-	@property
-	def box_arr(self) :
+	def box_as_array(self) :
 		return np.array([
 			(self.box.left, self.box.below),
 			(self.box.right, self.box.below),
@@ -52,14 +51,12 @@ class Polygon() :
 			(self.box.left, self.box.above)
 		])
 	
-	@property
 	def box_as_polygon(self) :
-		return Polygon(np.array([
-			(self.box.left, self.box.below),
-			(self.box.right, self.box.below),
-			(self.box.right, self.box.above),
-			(self.box.left, self.box.above)
-		]), is_convex=True)
+		return Polygon(self.box_as_array(), is_convex=True)
+	
+	def iter_boxcorner(self) :
+		for cx, cy in self.box_as_array() :
+			yield cx, cy
 	
 	def to_json(self) :
 		return [list(self.x_arr), list(self.y_arr)]
@@ -86,9 +83,6 @@ class Polygon() :
 		for i in range(len(self)) :
 			yield self[i], self[i+1]
 
-	def iter_boxcorner(self) :
-		for cx, cy in self.box_array :
-			yield cx, cy
 
 	def convexity(self) :
 		""" return for each point the angle blocked by the other points
@@ -109,6 +103,29 @@ class Polygon() :
 		if self.is_convex :
 			return self
 		return Polygon(self.p_arr[self.convexity() < math.pi,:], is_convex=True)
+				
+	def get_convex_edge(self, i0, i1) :
+		""" return a list of points following the edges which are (locally) convex and outside the polygon
+		TEST PASSED 
+		"""
+		a, b, w = (i0, i1, 1) if i0 < i1 else (i1, i0, -1)
+		r_lst = list(range(a, b+1))
+		while 3 <= len(r_lst) :
+			xa, ya = self[r_lst[0]] # A
+			xb, yb = self[r_lst[1]] # B
+			ABx, ABy = xb - xa, yb - ya
+			for i, r in enumerate(r_lst[2:]) :
+				xc, yc = self[r_lst[i+2]] # C
+				BCx, BCy = xc - xb, yc - yb
+				u = ABx * BCy - ABy * BCx
+				if w * u <= 0.0 :
+					r_lst[i+1] = None
+				ABx, ABy, xb, yb = BCx, BCy, xc, yc
+			p_len = len(r_lst)
+			r_lst = [r for r in r_lst if r is not None]
+			n_len = len(r_lst)
+			if p_len == n_len :
+				return r_lst
 
 	def ventilate_vertex(self, i) :
 		""" return the unwrapped angles computed for each points of the polygon
@@ -135,7 +152,8 @@ class Polygon() :
 		plt.plot(self.x_arr, self.y_arr, '+--')
 		# for i, (x, y) in enumerate(self) :
 		# 	plt.text(x+0.1, y+0.1, str(i), color="tab:blue")
-		plt.plot([x for x, y in self.iter_boxcorner()], [y for x, y in self.iter_boxcorner()], '-.')
+		b_arr = self.box_as_array()
+		plt.plot(b_arr[:,0], b_arr[:,1], '-.')
 
 	def is_inside_box(self, A) :
 		""" return True if A is inside the box enclosing the polygon """
