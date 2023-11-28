@@ -7,6 +7,7 @@ import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 
 from cc_pathlib import Path
 
@@ -25,8 +26,6 @@ def log(txt) :
 
 def argmax(x):
 	return max(range(len(x)), key=lambda i: x[i])
-
-	
 class Point() :
 	# free point, or status unknown
 	def __init__(self, x, y) :
@@ -90,7 +89,7 @@ class RouteMap() :
 			self.r_map[r] = status
 
 	def pop(self, r) :
-		del self.r_map[r]
+		self.r_map.pop(r, None)
 
 	def __setitem__(self, r, status) :
 		self.r_map[r] = status
@@ -113,6 +112,20 @@ class Route() :
 		self.layer = layer
 		self.route = RouteMap()
 
+	def plot(self) :
+		cmap = matplotlib.colormaps['viridis']
+		for (A, B), status in self.route :
+
+			col = {None : "tab:red", True: "tab:green", False: "tab:purple"}
+			(ax, ay), (bx, by) = A.val, B.val
+			for i in range(10) :
+				t0 = i / 10
+				t1 = (i+1) / 10
+				plt.plot(
+					[ax*(1-t0) + bx*t0, ax*(1-t1) + bx*t1],
+					[ay*(1-t0) + by*t0, ay*(1-t1) + by*t1],
+					color=cmap(i/9)
+				)
 
 	def compute(self, from_point, to_point) :
 		""" point de départ, point d'arrivée,
@@ -226,8 +239,6 @@ class Route() :
 									with Path("route.tsv").open('at') as fid:
 										fid.write(f"--- {len(self.route.r_map)}\n" + str(self.route) + '\n~~~\n')
 								prev = next
-
-						
 					plt.grid()
 					plt.axis("equal")
 					plt.savefig(f"{z:04d}.b.png")
@@ -252,14 +263,18 @@ class Route() :
 		# for i in range(len(p_gon)) :
 		# 	plt.text(p_gon.x_arr[i], p_gon.y_arr[i] + 0.2, str(i))
 		plt.text(bx+0.1, by, "B")
-		plt.plot([ax, bx], [ay, by])
+
 		self.layer[0].plot()
 
-		d0, A, B = self.sidestep(A, B)
+		A = self.sidestep(A, B, True)
+		B = self.sidestep(B, A, False)
+
 		# d1, B, A = self.sidestep(B, A)
 
-		(ax, ay), (bx, by) = A.val, B.val
-		plt.plot([ax, bx], [ay, by])
+		self.plot()
+
+		# (ax, ay) = A.val
+		# plt.plot([ax, bx], [ay, by])
 
 		plt.grid()
 		plt.axis("equal")
@@ -312,7 +327,7 @@ class Route() :
 				A = Vertex(self.layer, A.p, jj)
 
 
-	def follow_edge(self, A, B) :
+	def push_edge(self, i0, i1, p) :
 		""" extract the succession of points which goes from A to B following the egde (A and B must be vertices of the same polygon) """
 
 		log(f">>> follow_edge({A}, {B}")
@@ -330,36 +345,30 @@ class Route() :
 
 		return r_lin, w
 
-	def push_convex_line(self, r_lin) :
-		""" take a succession of vertices and points and add a convex path to the route """
-		r_gon = r_lin.get_polygon()
-		c_arr = r_gon.convexity()
+	def push_convex_edge(self, A, B, p, z) :
 
-		log(r_gon)
-		log(c_arr)
+		""" push a list of points of the egde of the p-th polygon """
+		p_gon = self.layer[p].orig
+		n_lst = p_gon.get_convex_edge(A.n, B.n)
 
-		ne marche pas de manière générale, il faut absolument savoir de quel côté est le polygone pour faire correctement le travail
+		prev = n_lst[0]
+		for next in n_lst[1:] :
+			self.route.push(Vertex(self.layer, p, prev if z else next), Vertex(self.layer, p, next if z else prev), False if abs(prev - next) == 1 else None)
+			prev = next
 
-		prev = None
-		for next, c in zip(r_lin, c_arr) :
-			if prev is None :
-				prev = next
-			elif c < math.pi :
-				m = None 
-				if isinstance(prev, Vertex) and isinstance(next, Vertex) and abs(prev.n - next.n) == 1 : # if the egde is between two consecutive vertices
-					m = False # don't bother to compute a collision
-				self.route.push(prev, next, m)
-				prev = next
+	def sidestep(self, A, B, z) :
+		""" décalle le point A pour éviter qu'il ne passe à travers l'obstacle directement à partir de A dans sa route de A vers B
+		semble OK
+		"""
 
-	def sidestep(self, A, B) :
-		""" décalle le point A pour éviter qu'il ne passe à travers l'obstacle directement à partir de A """
-
-		log(f"sidestep({A}, {B})")
+		log(f"sidestep({A}, {B}, {z})")
 
 		if isinstance(A, Vertex) : # si A n'est pas un sommet, on sort direct
 			i_lst = self.collision(A, B, A.p) # compute a list of collisions with the polygon on which A is a Vertex
+
 			if not i_lst :
-				return -1, A, B # ça serait bien de signaler si on sait directement qu'il n'y a pas de collision entre A et B afin d'accélérer la suite
+				# ça serait bien de signaler si on sait directement qu'il n'y a pas de collision entre A et B afin d'accélérer la suite
+				return A
 			
 			p_gon = self.layer[A.p].orig
 			t0, i0, z0 = i_lst[0] # return the closest collision
@@ -378,8 +387,7 @@ class Route() :
 				if u < 0.0 :
 					pass
 				else :
-					return 0, A, B
-
+					return A
 
 			j_lst = list() # list des points après A et avant la première collision
 			for j in range(A.n + w, i0 + w, w) :
@@ -390,18 +398,18 @@ class Route() :
 
 				j_lst.append(abs(u))
 
-			log(f"j_lst={j_lst}")
-
 			d = argmax(j_lst) + 1
 			M = Vertex(self.layer, A.p, A.n + d)
 
-			log(f"A={A} M={M}")
+			self.push_convex_edge(A, M, A.p, z)
+			if z :
+				self.route.push(M, B, None)
+				self.route.pop((A, B))
+			else :
+				self.route.push(B, M, None)
+				self.route.pop((B, A))
 
-			r_lin = self.follow_edge(A, M)
-			self.push_convex_line(r_lin)
-
-			return d, M, B
-
+			return M
 
 	def collision(self, A, B, p) :
 		p_gon = self.layer[p].orig

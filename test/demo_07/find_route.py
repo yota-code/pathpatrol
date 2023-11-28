@@ -20,11 +20,11 @@ layer.g_lst = [layer.g_lst[0],]
 A = (40.0, 40.0)
 B = (250.0, 240.0)
 
-
-
 u = Route(layer)
 
-u.goaround_corner(Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206))
+P, Q = Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206)
+u.route.push(P, Q, None)
+u.goaround_corner(P, Q)
 
 # u.compute(A, B)
 
