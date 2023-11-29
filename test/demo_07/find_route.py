@@ -22,13 +22,11 @@ B = (250.0, 240.0)
 
 u = Route(layer)
 
-P, Q = Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206)
-u.route.push(P, Q, None)
-u.goaround_corner(P, Q)
+# P, Q = Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206)
+# u.route.push(P, Q, None)
+# u.goaround_corner(P, Q)
 
-# u.compute(A, B)
-
-
+u.compute(A, B)
 
 # """ il faut rechercher les polygones qui intersectent avec AB et les prendre dans l'ordre, de A vers B"""
 

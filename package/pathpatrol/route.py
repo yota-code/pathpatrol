@@ -359,11 +359,12 @@ class Route() :
 	def sidestep(self, A, B, z) :
 		""" décalle le point A pour éviter qu'il ne passe à travers l'obstacle directement à partir de A dans sa route de A vers B
 		semble OK
+		A et B n'ont pas besoin d'être sur le même polygon ? pourtant ce sera toujours le cas je pense
 		"""
 
 		log(f"sidestep({A}, {B}, {z})")
 
-		if isinstance(A, Vertex) : # si A n'est pas un sommet, on sort direct
+		if isinstance(A, Vertex) : # si A n'est pas un des sommets du polygone, on sort direct
 			i_lst = self.collision(A, B, A.p) # compute a list of collisions with the polygon on which A is a Vertex
 
 			if not i_lst :
@@ -389,7 +390,7 @@ class Route() :
 				else :
 					return A
 
-			j_lst = list() # list des points après A et avant la première collision
+			j_lst = list() # liste des points après A et avant la première collision
 			for j in range(A.n + w, i0 + w, w) :
 				M = p_gon[j]
 				u = angle_3pt(B.val, A.val, M)
