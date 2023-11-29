@@ -14,7 +14,7 @@ Polybox = collections.namedtuple('Polybox', ['left', 'right', 'below', 'above'])
 
 class Polygon() :
 
-	""" a closed line """
+	""" a polygon describe a closed shape by enclosing an area, turning in the trigonometric way """
 
 	def __init__(self, * pos, is_convex=False) :
 
@@ -83,9 +83,8 @@ class Polygon() :
 		for i in range(len(self)) :
 			yield self[i], self[i+1]
 
-
-	def convexity(self) :
-		""" return for each point the angle blocked by the other points
+	def angle_of_view(self) :
+		""" return the angle of obstruction for each point, ie. the angle blocked by the other points
 		if the angle blocked is stricly lower than pi, the point is a convex vertex
 		if the angle blocked is higher than tau, the point is enclaved 
 		"""
@@ -102,10 +101,11 @@ class Polygon() :
 	def get_convex_hull(self) :
 		if self.is_convex :
 			return self
-		return Polygon(self.p_arr[self.convexity() < math.pi,:], is_convex=True)
+		return Polygon(self.p_arr[self.angle_of_view() < math.pi,:], is_convex=True)
 				
 	def get_convex_edge(self, i0, i1) :
 		""" return a list of points following the edges which are (locally) convex and outside the polygon
+		iterative algorithm
 		TEST PASSED 
 		"""
 		a, b, w = (i0, i1, 1) if i0 < i1 else (i1, i0, -1)

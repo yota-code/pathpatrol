@@ -422,7 +422,7 @@ class Route() :
 			return list()
 		return sorted(p_gon.scan_intersection(A.val, B.val))
 
-	def go_around(self, A, B, p, i_lst, way) :
+	def goaround_hull(self, A, B, p, i_lst, way) :
 		""" A et B ne doivent pas être dans p_gon ni appartenir à ses arrêtes ou ses sommets
 		i_lst c'est la liste des points d'intersection
 		way est égal à True pour un contournement par la droite, False pour la gauche

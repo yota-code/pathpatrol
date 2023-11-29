@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import enum
 import math
 import sys
 
@@ -11,93 +12,96 @@ from cc_pathlib import Path
 from pathpatrol.polygon import Polygon
 # from pathpatrol.common import PointTyp
 
-class Piece() :
-	def __init__(self, orig:Polygon) :
-		self.orig = orig
+class PointPos(enum.Enum) :
+	UNKNOWN = 0
+	OUTSIDE = 1
+	CRATER = 2
+	CAVITY = 3
+	EDGE = 4
+	VERTEX = 5
+	INSIDE = 6
 
-		self.compute_convex()
-		self.compute_concave()
+class Piece() :
+	def __init__(self, shape:Polygon) :
+		self.shape = shape
+
+		self._pre_compute()
 
 	def __len__(self) :
-		return len(self.orig)
+		return len(self.shape)
 	
 	def to_json(self) :
 		return {
-			'orig' : self.orig.to_json(),
+			'shape' : self.shape.to_json(),
 			'convex' : self.convex.to_json(),
 			'concave' : list(self.concave),
-			'enclave' : self.o_set
 		}
 	
 	def get_point_type(self, A) :
 		""" return the type of point relative to this piece """
 
-		if not self.orig.is_inside_box(A) :
+		if not self.shape.is_inside_box(A) :
 			# the point is oustside the box 
-			return PointTyp.OUTSIDE, None
+			return PointPos.OUTSIDE, None
 		
-		w_arr = self.orig.ventilate_point(A)
+		w_arr = self.shape.ventilate_point(A)
 		angle = np.max(w_arr) - np.min(w_arr)
 
 		if angle < math.pi :
 			# the point is outside the convex hull
-			return PointTyp.OUTSIDE, None
+			return PointPos.OUTSIDE, None
 		else :
 			# the point is either in a cavity or inside the shape
-			for i, (a, b) in enumerate(self.concave) :
-				e_gon = Polygon(self.orig[a:b+1])
+			for i, (a, b, c) in enumerate(self.concave) :
+				e_gon = Polygon(self.shape[a:b+1])
 				if e_gon.is_inside_box(A) and e_gon.is_inside_shape(A) :
-					return PointTyp.CRATER if angle < math.tau else PointTyp.CAVITY, i
+					return PointPos.CRATER if angle < math.tau else PointPos.CAVITY, i
 
-			return PointTyp.IMPOSSIBLE, None
+			return PointPos.INSIDE, None
 		
 	def carved_hull(self, c_lst) :
 		""" return the convex hull with only some special shapes carved, according to the list of cavities/craters c_lst"""
 		pass
 		
-	def is_enclave(self, a, b) :
-		return bool(set(range(a+1, b)) ^ self.o_set)
-
 	def plot(self) :
-		plt.fill(self.orig.x_arr, self.orig.y_arr, color="tab:blue", alpha=0.5)
-		plt.plot(self.orig.x_arr, self.orig.y_arr, "+--", color="tab:blue", alpha=0.5)
-		plt.plot(self.convex.x_arr, self.convex.y_arr, '+--', color="tab:green", linewidth=3, alpha=0.5)
-		plt.plot(self.orig.x_arr[0], self.orig.y_arr[0], '+', color="tab:red")
-		# for k, v in self.concave.items() :
-		# 	print(k, v.x_arr, v.y_arr)
-		# 	plt.plot(v.x_arr, v.y_arr)
-		# plt.grid()
-		# plt.axis("equal")
-		# plt.show()
+		plt.fill(self.shape.x_arr, self.shape.y_arr, color="tab:blue", alpha=0.5)
+		plt.plot(self.shape.x_arr, self.shape.y_arr, "+--", color="tab:blue", alpha=0.5)
+		plt.plot(self.convex.x_arr, self.convex.y_arr, '+--', color="tab:green", linewidth=2, alpha=0.5)
+		plt.plot(self.shape.x_arr[0], self.shape.y_arr[0], '+', color="tab:red")
+		for a, b, c in self.concave :
+			plt.plot(self.shape.x_arr[a:b+1], self.shape.y_arr[a:b+1], color=("tab:red" if c else "tab:orange"))
 
-	def compute_convex(self) :
-		self.z_arr = np.zeros((len(self.orig),), dtype=np.int8)
+	def _pre_compute(self) :
+		"""
+		compute and store the convex hull of the shape under self.convex (an instance of Polygon)
+		compute also the 
+		"""
+		n_arr = np.zeros((len(self),), dtype=np.double)
 
-		self.o_set = set()
-		for i in range(len(self.orig)) :
-			u_arr = self.orig.ventilate_vertex(i)
-			u_min = np.nanmin(u_arr)
-			u_max = np.nanmax(u_arr)
-			self.z_arr[int(i)] = (u_max - u_min) < math.pi
-			if math.tau <= (u_max - u_min) :
-				self.o_set.add(int(i))
+		for i in range(len(self)) :
+			u_arr = self.shape.ventilate_vertex(i)
+			n_arr[i] = np.nanmax(u_arr) - np.nanmin(u_arr)
 
-		self.convex = Polygon(self.orig.p_arr[self.z_arr != 0,:], is_convex=True)
+		c_arr = np.where(n_arr < math.pi, 1, 0)
 
-	def compute_concave(self) :
+		self.convex = Polygon(self.shape.p_arr[c_arr != 0,:], is_convex=True)
+
 		self.concave = list()
 		for i in range(0, len(self)) :
-			m = self.z_arr[(i+1) % len(self)] - self.z_arr[i % len(self)]
+			m = c_arr[(i+1) % len(self)] - c_arr[i]
+			if math.tau <= n_arr[i] :
+				c = True
 			if m < 0 :
 				a = i
+				c = False
 			if m > 0 :
 				b = i + 1
-				self.concave.append((a, b))
+				self.concave.append((a, b, c))
 
 	def _prep_sort(self) :
 		self.convex = Polygon(
-			self.orig.x_arr[np.where(self.m_arr== 0)],
-			self.orig.y_arr[np.where(self.m_arr== 0)]
+			self.shape.x_arr[np.where(self.m_arr== 0)],
+			self.shape.y_arr[np.where(self.m_arr== 0)]
 		)
 		self.cavity = dict()
 		for i in range(0, len(self)) :
@@ -106,7 +110,7 @@ class Piece() :
 				a = i
 			if m < 0 :
 				b = i + 2
-				self.cavity[(a, b)] = Polygon(self.orig[a:b,:])
+				self.cavity[(a, b)] = Polygon(self.shape[a:b,:])
 
 	def _prep_cut(self) :
 		"""
@@ -129,7 +133,7 @@ class Piece() :
 				except ValueError :
 					print("end of line")
 					break
-				w = self.side(self.orig[a], self.orig[b], self.orig[m])
+				w = self.side(self.shape[a], self.shape[b], self.shape[m])
 				if w >= 0 :
 					self.m_arr[a+1:b] = -1
 				i = a
