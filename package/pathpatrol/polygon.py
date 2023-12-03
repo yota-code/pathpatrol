@@ -8,6 +8,8 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pathpatrol.sequence import Sequence, Point, Vertex
+
 from cc_pathlib import Path
 
 Polybox = collections.namedtuple('Polybox', ['left', 'right', 'below', 'above'])
@@ -63,7 +65,7 @@ class Polygon() :
 
 	def __getitem__(self, i) :
 		if isinstance(i, int) :
-			return self.p_arr[i % len(self),:]
+			return tuple(self.p_arr[i % len(self),:])
 		return self.p_arr[i]
 		# elif isinstance(i, slice) :
 		# 	return np.array([self[j] for j in range(i.stop)[i]])
@@ -108,6 +110,8 @@ class Polygon() :
 		iterative algorithm
 		TEST PASSED 
 		"""
+		raise ValueError
+		# voir dans sequence iterative convex, qui permet de ne pas perdre de vue les types de segments
 		a, b, w = (i0, i1, 1) if i0 < i1 else (i1, i0, -1)
 		r_lst = list(range(a, b+1))
 		while 3 <= len(r_lst) :
@@ -127,6 +131,22 @@ class Polygon() :
 			if p_len == n_len :
 				return r_lst
 
+	def ventilate(self, A) :
+		if isinstance(A, Point) :
+			return self.ventilate_point(A.xy)
+		elif isinstance(A, Vertex) :
+			return self.ventilate_vertex(A.n)
+
+	def ventilate_point(self, A) :
+		""" return the unwrapped angles computed between A and each points of the polygon
+		"""
+		ax, ay = A
+		
+		m_arr = np.arctan2(self.y_arr - ay, self.x_arr - ax)
+		w_arr = np.unwrap(m_arr)
+
+		return w_arr
+	
 	def ventilate_vertex(self, i) :
 		""" return the unwrapped angles computed for each points of the polygon
 		the first point returned is the first one after i (trigo way)
@@ -135,16 +155,6 @@ class Polygon() :
 
 		m_arr = np.arctan2(self.y_arr - ay, self.x_arr - ax)
 		w_arr = np.unwrap(np.hstack((m_arr[i+1:], m_arr[:i])))
-
-		return w_arr
-
-	def ventilate_point(self, A) :
-		""" return the unwrapped angles computed between A and each points of the polygon
-		"""
-		ax, ay = A
-
-		m_arr = np.arctan2(self.y_arr - ay, self.x_arr - ax)
-		w_arr = np.unwrap(m_arr)
 
 		return w_arr
 
@@ -160,10 +170,38 @@ class Polygon() :
 		ax, ay = A
 		return self.box.left <= ax <= self.box.right and self.box.below <= ay <= self.box.above
 	
+	def is_inside(self, A) :
+		""" return True if point A is inside the Polygon
+		version optimisée """
+		if not self.is_inside_box(A) :
+			return False
+		
+		ax, ay = A
+		bx, by = self.box[1] + 2, 0.0
+
+		p = 0
+		for C, D in self.iter_segment() :
+			cx, cy = C[0], C[1] - ay
+			dx, dy = D[0], D[1] - ay
+			print(C, D, cx, dx, cy, dy, cy * dy)
+			if 0.0 < cy * dy : # C and D are both over or under the line, skip
+				continue
+			if cy != dy : # CD crosses AB, if it does in [0.0,1.0[ count 1 crossing
+				print(">>>", C, D, p, cy, dy)
+				if ax <= (cy*dx - cx*dy) / (cy - dy) < bx :
+					p += 1
+			else : # CD is parrallel to AB
+				if cy == ay and cx <= ax <= dx or dx <= ax <= cx :
+					plt.show()
+					return True
+		
+		return (p % 2) != 0
+	
+	
 	def do_intersect_box(self, A, B) :
 		""" return True if A, B pass through the box enclosing the polygon """
 		(ax, ay), (bx, by) = A, B
-		b_gon = self.box_as_polygon
+		b_gon = self.box_as_polygon().intersection
 		w_arr = ((b_gon.x_arr - ax)*(by - ay)) - ((b_gon.y_arr - ay)*(bx - ax))
 		w_prev = w_arr[0]
 		for i, w in enumerate(w_arr[1:]) :
@@ -186,7 +224,7 @@ class Polygon() :
 				return True
 		return False
 	
-	def scan_intersection(self, A, B) :
+	def intersection(self, A, B) :
 		"""
 		return a list of all segments of the polygon which intersect with AB
 		return also the position in AB (in [0;1]) and the way it is crossed (left to right or right to left)
@@ -240,39 +278,21 @@ class Polygon() :
 
 		return np.array(left_lst), np.array(reversed(right_lst))
 
-	def intersection(self, A, B, C, D) :
-		""" test if AB intersect CD, return the position of the intesection points or Math.Inf, if parrallel """
-		(ax, ay), (bx, by) = A, B
-		(cx, cy), (dx, dy) = C, D
+	# def intersection(self, A, B, C, D) :
+	# 	""" test if AB intersect CD, return the position of the intesection points or Math.Inf, if parrallel """
+	# 	(ax, ay), (bx, by) = A, B
+	# 	(cx, cy), (dx, dy) = C, D
 
-		d = (ax*cy - ax*dy - ay*cx + ay*dx - bx*cy + bx*dy + by*cx - by*dx)
+	# 	d = (ax*cy - ax*dy - ay*cx + ay*dx - bx*cy + bx*dy + by*cx - by*dx)
 
-		if math.isclose(d, 0.0, abs_tol=1e-12) :
-			return math.inf, math.inf
+	# 	if math.isclose(d, 0.0, abs_tol=1e-12) :
+	# 		return math.inf, math.inf
 
-		k1 = (ax*cy - ax*dy - ay*cx + ay*dx + cx*dy - cy*dx) / d
-		k2 = (-ax*by + ax*cy + ay*bx - ay*cx - bx*cy + by*cx) / d
+	# 	k1 = (ax*cy - ax*dy - ay*cx + ay*dx + cx*dy - cy*dx) / d
+	# 	k2 = (-ax*by + ax*cy + ay*bx - ay*cx - bx*cy + by*cx) / d
 
-		return k1, k2
+	# 	return k1, k2
 	
-	def is_inside_shape(self, A) :
-		""" return True if point A is inside the Polygon """
-		x_min, x_max, y_min, y_max = self.box
-
-		if not (x_min <= A[0] <= x_max and y_min <= A[1] <= y_max) :
-			return False
-
-		B = (x_max + 4, A[1])
-
-		p = 0
-		for C, D in self.iter_segment() :
-			# on pourrait optimiser, avec un test d'intersection qui tient compte de la situation particulière de A, B, horizontal et B toujours à droite
-			k1, k2 = self.intersection(A, B, C, D)
-			if k1 == 0.0 :
-				return True
-			if 0.0 <= k1 <= 1.0 and 0.0 <= k2 <= 1.0 :
-				p += 1
-		return (p % 2) != 0
 	
 	def simplify(self) :
 		""" useful only for pixel based contours """
@@ -293,22 +313,6 @@ class Polygon() :
 			list(itertools.accumulate([y for x, y in p_lst[:-1]]))
 		)
 
-	def ventilate(self, M) :
-		raise NotImplementedError
-		""" return the unwrapped chain of angles around the polynom """
-		mx, my = M
-
-		orig = math.atan2(self.y_arr[0] - my, self.x_arr[0] - mx)
-		d_arr = np.sqrt((self.x_arr - mx)**2 + (self.y_arr - my)**2)
-
-		m_lst = [orig,] # on risque que la somme soit moins précise
-		for i in range(len(self)) :
-			j = (i + 1) % len(self)
-			(ax, ay), (bx, by) = self.p_arr[i], self.p_arr[j]
-			u = ((ax - mx)*(by - my)) - ((ay - my)*(bx - mx))
-			m_lst.append(m_lst[-1] + math.asin(u / (d_arr[i] * d_arr[j])))
-
-		return np.array(m_lst)
 	
 	def to_polar(self, A, B=None) :
 		""" return the polygon expressed as an angle (m_arr in radian) and a distance (d_arr)

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from cc_pathlib import Path
 
 from pathpatrol.polygon import Polygon
+from pathpatrol.sequence import Sequence
 # from pathpatrol.common import PointTyp
 
 class PointPos(enum.Enum) :
@@ -24,8 +25,34 @@ class PointPos(enum.Enum) :
 class Piece() :
 	def __init__(self, shape:Polygon) :
 		self.shape = shape
-
 		self._pre_compute()
+
+	def _pre_compute(self) :
+		"""
+		compute the convex hull store it under self.convex (as an instance of Polygon)
+		compute also the concavities and if they contains blind points
+		"""
+		n_arr = np.zeros((len(self),), dtype=np.double)
+
+		for i in range(len(self)) :
+			u_arr = self.shape.ventilate_vertex(i)
+			n_arr[i] = np.nanmax(u_arr) - np.nanmin(u_arr)
+
+		c_arr = np.where(n_arr < math.pi, 1, 0)
+
+		self.convex = Polygon(self.shape.p_arr[c_arr != 0,:], is_convex=True)
+
+		self.concave = list()
+		for i in range(0, len(self)) :
+			m = c_arr[(i+1) % len(self)] - c_arr[i]
+			if math.tau <= n_arr[i] :
+				c = True
+			if m < 0 :
+				a = i
+				c = False
+			if m > 0 :
+				b = i + 1
+				self.concave.append((a, b, c))
 
 	def __len__(self) :
 		return len(self.shape)
@@ -36,6 +63,14 @@ class Piece() :
 			'convex' : self.convex.to_json(),
 			'concave' : list(self.concave),
 		}
+	
+	def plot(self) :
+		plt.fill(self.shape.x_arr, self.shape.y_arr, color="tab:blue", alpha=0.5)
+		plt.plot(self.shape.x_arr, self.shape.y_arr, "+--", color="tab:blue", alpha=0.5)
+		plt.plot(self.convex.x_arr, self.convex.y_arr, '+--', color="tab:green", linewidth=2, alpha=0.5)
+		plt.plot(self.shape.x_arr[0], self.shape.y_arr[0], '+', color="tab:red")
+		for a, b, c in self.concave :
+			plt.plot(self.shape.x_arr[a:b+1], self.shape.y_arr[a:b+1], color=("tab:red" if c else "tab:orange"))
 	
 	def get_point_type(self, A) :
 		""" return the type of point relative to this piece """
@@ -59,44 +94,62 @@ class Piece() :
 
 			return PointPos.INSIDE, None
 		
+	def go_around(self, A, B) :
+		"""
+		A and B must be checked to be points (not vertices) and outiside the convex hull of the piece
+		"""
+
+		# no need for intersections, we go for the full ventilation over the convex polygon
+		# works only on the convex polygon
+
+		a_vnt = self.convex.ventilate_point(A.xy)
+		a_lft = a_vnt.argmax()
+		a_rgt = a_vnt.argmin()
+
+		b_vnt = self.convex.ventilate_point(B.xy)
+		b_lft = b_vnt.argmin()
+		b_rgt = b_vnt.argmax()
+
+		l_seq = Sequence()
+		l_seq.push_one(A)
+		l_seq.push_vertices(self.convex, a_lft, b_lft, -1)
+		l_seq.push_one(B)
+
+		r_seq = Sequence()
+		r_seq.push_one(A)
+		r_seq.push_vertices(self.convex, a_rgt, b_rgt, 1)
+		r_seq.push_one(B)
+
+		return l_seq, r_seq
+
+	def go_through(self, A, B, i_lst) :
+		""" cleanest version yet"""
+
+		r_seq, l_seq = Sequence().push(A), Sequence().push(B)
+
+		if len(i_lst) % 2 == 0 :
+			# standard case, with as many enter as exit
+			for (t0, i0, w0), (t1, i1, w1) in zip(i_lst[::2], i_lst[1::2]) :
+				print(t0, i0, w0, t1, i1, w1)
+				if w0 is False and w1 is True :
+					m_seq = l_seq
+				elif w0 is True and w1 is False :
+					m_seq = r_seq
+				else :
+					raise ValueError
+				m_seq.push_vertices(self.shape, i0+1, i1)
+
+		r_seq.push(B)
+		l_seq.push(A)
+
+		r_seq.iterative_convex_reduction()
+		l_seq.iterative_convex_reduction()
+
+		return r_seq, l_seq.reversed()
+
 	def carved_hull(self, c_lst) :
 		""" return the convex hull with only some special shapes carved, according to the list of cavities/craters c_lst"""
 		pass
-		
-	def plot(self) :
-		plt.fill(self.shape.x_arr, self.shape.y_arr, color="tab:blue", alpha=0.5)
-		plt.plot(self.shape.x_arr, self.shape.y_arr, "+--", color="tab:blue", alpha=0.5)
-		plt.plot(self.convex.x_arr, self.convex.y_arr, '+--', color="tab:green", linewidth=2, alpha=0.5)
-		plt.plot(self.shape.x_arr[0], self.shape.y_arr[0], '+', color="tab:red")
-		for a, b, c in self.concave :
-			plt.plot(self.shape.x_arr[a:b+1], self.shape.y_arr[a:b+1], color=("tab:red" if c else "tab:orange"))
-
-	def _pre_compute(self) :
-		"""
-		compute and store the convex hull of the shape under self.convex (an instance of Polygon)
-		compute also the 
-		"""
-		n_arr = np.zeros((len(self),), dtype=np.double)
-
-		for i in range(len(self)) :
-			u_arr = self.shape.ventilate_vertex(i)
-			n_arr[i] = np.nanmax(u_arr) - np.nanmin(u_arr)
-
-		c_arr = np.where(n_arr < math.pi, 1, 0)
-
-		self.convex = Polygon(self.shape.p_arr[c_arr != 0,:], is_convex=True)
-
-		self.concave = list()
-		for i in range(0, len(self)) :
-			m = c_arr[(i+1) % len(self)] - c_arr[i]
-			if math.tau <= n_arr[i] :
-				c = True
-			if m < 0 :
-				a = i
-				c = False
-			if m > 0 :
-				b = i + 1
-				self.concave.append((a, b, c))
 
 	def _prep_sort(self) :
 		self.convex = Polygon(

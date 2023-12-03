@@ -11,22 +11,22 @@ from cc_pathlib import Path
 
 from pathpatrol.layer import Layer
 from pathpatrol.polygon import Polygon
-from pathpatrol.route import Route, Point, Vertex
+from pathpatrol.compute import Compute
+from pathpatrol.sequence import Point
+from pathpatrol.route import Route
 
 layer = Layer().load_rastermap('map.png')
 
+A = Point(40.0, 40.0)
+B = Point(250.0, 240.0)
+
 layer.g_lst = [layer.g_lst[0],]
 
-A = (40.0, 40.0)
-B = (250.0, 240.0)
-
-u = Route(layer)
+u = Compute(layer).run(A, B)
 
 # P, Q = Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206)
 # u.route.push(P, Q, None)
 # u.goaround_corner(P, Q)
-
-u.compute(A, B)
 
 # """ il faut rechercher les polygones qui intersectent avec AB et les prendre dans l'ordre, de A vers B"""
 

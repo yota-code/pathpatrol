@@ -69,8 +69,9 @@ class Layer() :
 
 	def plot(self) :
 		# plt.figure()
-		for piece in self :
+		for n, piece in enumerate(self) :
 			piece.plot()
+			plt.text(* piece.shape[0], str(n))
 			# g.orig.plot()
 			# g.convex.plot()
 		#for i, j, p, q, w in self.r_lst :
