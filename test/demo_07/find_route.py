@@ -22,7 +22,7 @@ B = Point(250.0, 240.0)
 
 layer.g_lst = [layer.g_lst[0],]
 
-u = Compute(layer).run(A, B)
+u = Compute(layer).solve(A, B)
 
 # P, Q = Vertex(u.layer, 0, 485), Vertex(u.layer, 0, 206)
 # u.route.push(P, Q, None)

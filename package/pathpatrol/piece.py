@@ -125,7 +125,10 @@ class Piece() :
 	def go_through(self, A, B, i_lst) :
 		""" cleanest version yet"""
 
+		c'est là qu'il faut dégager les intersections incarnées... mais comment ...
+
 		r_seq, l_seq = Sequence().push(A), Sequence().push(B)
+		r_seq, l_seq = Sequence(), Sequence()
 
 		if len(i_lst) % 2 == 0 :
 			# standard case, with as many enter as exit
@@ -139,11 +142,12 @@ class Piece() :
 					raise ValueError
 				m_seq.push_vertices(self.shape, i0+1, i1)
 
-		r_seq.push(B)
-		l_seq.push(A)
-
-		r_seq.iterative_convex_reduction()
-		l_seq.iterative_convex_reduction()
+		if r_seq.b_lst :
+			r_seq.b_lst = [A,] + r_seq.b_lst  + [B,]
+			r_seq.iterative_convex_reduction()
+		if l_seq.b_lst :
+			l_seq.b_lst = [B,] + l_seq.b_lst  + [A,]
+			l_seq.iterative_convex_reduction()
 
 		return r_seq, l_seq.reversed()
 

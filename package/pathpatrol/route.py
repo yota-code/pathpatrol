@@ -37,13 +37,18 @@ class Route() :
 
 	def __init__(self) :
 		self.r_map = dict()
+		self.d_set = set() # a set of already resolved segments
 
 	def push(self, r, status=SegmentType.UNKNOWN) :
+		if r in self.d_set :
+			log(f">>> RouteMap.push({r}, {status}) :: " + ("SKIPPED"))
+			return
 		if r not in self.r_map or self.r_map[r] < status :
-			log(f"RouteMap.push({r}, {status}) :: " + ("UPDATE" if r in self.r_map else "INSERT"))
+			log(f">>> RouteMap.push({r}, {status}) :: " + ("UPDATE" if r in self.r_map else "INSERT"))
 			self.r_map[r] = status
 
 	def pop(self, r) :
+		self.d_set.add(r)
 		self.r_map.pop(r, None)
 
 	def __setitem__(self, r, status) :
@@ -58,7 +63,7 @@ class Route() :
 
 	def __str__(self) :
 		s_lst = list()
-		for r in sorted(self.r_map, key=lambda x : (x[0].val, x[1].val)) :
+		for r in sorted(self.r_map, key=lambda x : (x[0].xy, x[1].xy)) :
 			s_lst.append(f"{r[0]}\t{r[1]}\t{self.r_map[r]}")
 		return '\n'.join(s_lst)
 	
@@ -77,7 +82,7 @@ class Route() :
 		cmap = matplotlib.colormaps['viridis']
 		for (A, B), status in self :
 			line = 'solid'
-			if isinstance(A, Vertex) and isinstance(B, Vertex) and B.p_gon is A.p_gon and B.n < A.n :
+			if isinstance(A, Vertex) and isinstance(B, Vertex) and B.p_gon is A.p_gon and A.n - B.n == 1 :
 				line = 'dashed'
 			(ax, ay), (bx, by) = A.xy, B.xy
 			plt.plot([ax, bx], [ay, by], color={

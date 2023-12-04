@@ -130,21 +130,30 @@ class Compute() :
 		self.route = Route()
 		self.route.push((A, B))
 
-		for segment, status in self.route :
-			if status is SegmentType.UNKNOWN : # the collision status is unknown, let's investigate
-				self.run(* segment)
+		for i in range(3) :
+			self.i = i
+			for j, (segment, status) in enumerate(self.route) :
+				self.j = j
+				log(f"-----  {i} {j}  -----")
+				if status is SegmentType.UNKNOWN : # the collision status is unknown, let's investigate
+					self.run(* segment)
 
 	def run(self, A, B) :
+		log(f">>> Compute.run(({A}, {B}))")
 
 		plt.figure(figsize=(12, 12))
 		self.plot()
 		plt.grid()
 		plt.axis("equal")
-		plt.savefig(f"img/{A}-{B}.00.png")
+		plt.savefig(f"img/{self.i:02d}.{self.j:02d}_{A}-{B}.00.png")
 		plt.close()
 
 		# le status des collisions est inconnu, il faut fouiller
 		piece, i_lst = self.first_collision(A.xy, B.xy)
+
+		if piece is None : # there is no collision at all, mark as checked and loop
+			self.route[(A, B)] = True
+			return
 
 		plt.figure(figsize=(12, 12))
 		(ax, ay), (bx, by) = A.xy, B.xy
@@ -158,47 +167,39 @@ class Compute() :
 		plt.plot([bx,], [by,], color="tab:orange")
 		plt.grid()
 		plt.axis("equal")
-		plt.savefig(f"img/{A}-{B}.01.png")
+		plt.savefig(f"img/{self.i:02d}.{self.j:02d}_{A}-{B}.01.png")
 		plt.close()
 
-		if piece is None : # there is no collision at all, mark as checked and loop
-			self.route[(A, B)] = True
-			return
-				
-		if isinstance(A, Point) and isinstance(B, Point) :
-			print(piece.convex.is_inside(A.xy), piece.convex.is_inside(B.xy))
-			if piece.convex.is_inside(A.xy) or piece.convex.is_inside(B.xy) :
-				r_lst = piece.go_through(A, B, i_lst)
-			else :
-				r_lst = piece.go_around(A, B)
+		#if isinstance(A, Point) and isinstance(B, Point) :
+		# print(piece.convex.is_inside(A.xy), piece.convex.is_inside(B.xy))
+		if piece.convex.is_inside(A.xy) or piece.convex.is_inside(B.xy) :
+			r_lst = piece.go_through(A, B, i_lst)
+		else :
+			r_lst = piece.go_around(A, B)
+
+		log(r_lst[0].b_lst)
+		log(r_lst[1].b_lst)
 		
 		plt.figure(figsize=(12, 12))
+		plt.title(f"sequence : {A} > {B}")
 		piece.plot()
-		plt.plot([ax, bx], [ay, by], color="black")
+		plt.plot([ax, bx], [ay, by], color="orange")
 		for r in r_lst :
 			r.plot()
 		plt.grid()
 		plt.axis("equal")
-		plt.savefig(f"img/{A}-{B}.02.png")
-		plt.show()
+		plt.savefig(f"img/{self.i:02d}.{self.j:02d}_{A}-{B}.02.png")
+		# if self.i == 1 and self.j == 1 :
+		# 	plt.show()
 		plt.close()
-
 
 		for r in r_lst :
 			self.route.add_sequence(r)
 
+		log(self.route)
 
-		plt.figure(figsize=(12, 12))
-		piece.plot()
-		self.route.plot()
-		plt.grid()
-		plt.axis("equal")
-		plt.savefig(f"img/{A}-{B}.03.png")
-		plt.show()
-		plt.close()
-
-
-
+		self.route.pop((A, B))
+		
 		# we extract the culprit
 
 

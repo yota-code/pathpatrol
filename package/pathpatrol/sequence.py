@@ -39,8 +39,11 @@ class Vertex() :
 	def __hash__(self) :
 		return hash(self.xy)
 	
+	def __eq__(self, other) :
+		return self.xy == other.xy
+	
 	def __repr__(self) :
-		return f"V{self.xy} @{self.n}"
+		return f"V{self.xy}@{self.n}"
 
 class Sequence() :
 	""" a list of points or vertices """
