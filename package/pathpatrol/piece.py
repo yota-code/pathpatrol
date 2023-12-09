@@ -130,10 +130,11 @@ class Piece() :
 
 		r_seq, l_seq = Sequence(), Sequence()
 
-		print(A, B)
 		if A.is_inward(B) :
+			print("---- A is inward")
 			i_lst.append([0.0, A.n, None])
 		if B.is_inward(A) :
+			print("---- B is inward")
 			i_lst.append([1.0, B.n, None])
 
 		i_lst = sorted(i_lst, key=lambda x: x[1])
@@ -141,8 +142,6 @@ class Piece() :
 			i_lst[0][2] = not i_lst[1][2]
 		if i_lst[-1][2] is None :
 			i_lst[-1][2] = not i_lst[-2][2]
-
-		print("RAAAAH", i_lst)
 
 		plt.figure()
 		(ax, ay), (bx, by) = A.xy, B.xy
@@ -157,7 +156,6 @@ class Piece() :
 		plt.grid()
 		plt.axis("equal")
 
-
 		if len(i_lst) % 2 == 0 :
 			# standard case, with as many enter as exit
 			for (t0, i0, w0), (t1, i1, w1) in zip(i_lst[::2], i_lst[1::2]) :
@@ -170,19 +168,21 @@ class Piece() :
 					raise ValueError
 				m_seq.push_vertices(self.shape, i0+1, i1)
 		else :
+			print("ERROR:", i_lst)
+			print("A.is_inward(B)")
+			A.is_inward(B, debug=True)
+			print("B.is_inward(A)")
+			B.is_inward(A, debug=True)
 			raise ValueError
 
 		if r_seq.b_lst :
 			r_seq.b_lst = [A,] + r_seq.b_lst  + [B,]
-			print("RRRR", r_seq.b_lst)
 			r_seq.iterative_convex_reduction()
 		if l_seq.b_lst :
 			l_seq.b_lst = [B,] + l_seq.b_lst  + [A,]
-			print("LLLL", l_seq.b_lst)
 			l_seq.iterative_convex_reduction()
 
 		plt.show()
-
 
 		return r_seq, l_seq.reversed()
 

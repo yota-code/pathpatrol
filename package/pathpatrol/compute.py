@@ -130,7 +130,7 @@ class Compute() :
 		self.route = Route()
 		self.route.push((A, B))
 
-		for i in range(3) :
+		for i in range(64) :
 			self.i = i
 			for j, (segment, status) in enumerate(self.route) :
 				self.j = j

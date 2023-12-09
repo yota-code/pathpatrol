@@ -17,27 +17,26 @@ from pathpatrol.route import Route
 
 layer = Layer().load_rastermap('map.png')
 
-# A = Point(40.0, 40.0)
-# B = Point(250.0, 240.0)
+A = Point(40.0, 40.0)
+B = Point(250.0, 240.0)
+layer.g_lst = [layer.g_lst[0],]
 
-# layer.g_lst = [layer.g_lst[0],]
+u = Compute(layer).solve(A, B)
 
-# u = Compute(layer).solve(A, B)
+# p_gon = layer.g_lst[0].shape
 
-p_gon = layer.g_lst[0].shape
+# A = Vertex(p_gon, 589)
+# B = Vertex(p_gon, 118)
 
-A = Vertex(p_gon, 589)
-B = Vertex(p_gon, 118)
+# u = Compute(layer)
+# piece, i_lst = u.first_collision(A, B)
+# r, l = piece.go_through(A, B, i_lst)
 
-u = Compute(layer)
-piece, i_lst = u.first_collision(A, B)
-r, l = piece.go_through(A, B, i_lst)
+# plt.figure()
+# piece.plot()
+# r.plot()
+# l.plot()
 
-plt.figure()
-piece.plot()
-r.plot()
-l.plot()
-
-plt.axis("equal")
-plt.grid()
-plt.show()
+# plt.axis("equal")
+# plt.grid()
+# plt.show()
