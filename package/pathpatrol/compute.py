@@ -149,7 +149,7 @@ class Compute() :
 		plt.close()
 
 		# le status des collisions est inconnu, il faut fouiller
-		piece, i_lst = self.first_collision(A.xy, B.xy)
+		piece, i_lst = self.first_collision(A, B)
 
 		if piece is None : # there is no collision at all, mark as checked and loop
 			self.route[(A, B)] = True
@@ -482,15 +482,18 @@ class Compute() :
 		
 		A and B can be eitther a point or a Vertice.
 		"""
+		Axy, Bxy = A.xy, B.xy
+
 		for piece in self.layer :
 			p_gon = piece.shape
-			if not (p_gon.is_inside_box(A) or p_gon.is_inside_box(B) or p_gon.box_as_polygon().intersection(A, B)) :
+			if not (p_gon.is_inside_box(Axy) or p_gon.is_inside_box(Bxy) or p_gon.box_as_polygon().intersection(Axy, Bxy)) :
 				# the segment doesn't even pass through the polygon box, continue
 				continue
-			i_lst = p_gon.intersection(A, B)
+			i_lst = p_gon.intersection(Axy, Bxy)
 			if i_lst :
-				return piece, i_lst
+				return piece, i_lst # i_lst est retourné dans l'ordre des sommets, pas des intersections
 		return None, list()
+	
 
 	def get_point_type(self, A) :
 		""" ne pas utiliser, useless ! """

@@ -312,6 +312,8 @@ class Polygon() :
 			list(itertools.accumulate([x for x, y in p_lst[:-1]])),
 			list(itertools.accumulate([y for x, y in p_lst[:-1]]))
 		)
+	
+
 
 	
 	def to_polar(self, A, B=None) :

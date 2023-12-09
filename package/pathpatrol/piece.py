@@ -125,10 +125,38 @@ class Piece() :
 	def go_through(self, A, B, i_lst) :
 		""" cleanest version yet"""
 
-		c'est là qu'il faut dégager les intersections incarnées... mais comment ...
+		# c'est là qu'il faut dégager les intersections incarnées... mais comment ...
+		# on va essayer de faire ça juste dans le calcul d'intersection
 
-		r_seq, l_seq = Sequence().push(A), Sequence().push(B)
 		r_seq, l_seq = Sequence(), Sequence()
+
+		print(A, B)
+		if A.is_inward(B) :
+			i_lst.append([0.0, A.n, None])
+		if B.is_inward(A) :
+			i_lst.append([1.0, B.n, None])
+
+		i_lst = sorted(i_lst, key=lambda x: x[1])
+		if i_lst[0][2] is None :
+			i_lst[0][2] = not i_lst[1][2]
+		if i_lst[-1][2] is None :
+			i_lst[-1][2] = not i_lst[-2][2]
+
+		print("RAAAAH", i_lst)
+
+		plt.figure()
+		(ax, ay), (bx, by) = A.xy, B.xy
+		plt.plot([ax, bx], [ay, by], color="black")
+		self.plot()
+		p_gon = self.shape
+		for t, i, w in i_lst :
+			plt.plot([ax*(1 - t) + bx*t,], [ay*(1 - t) + by*t,], 'o', color=("tab:red" if w else "tab:green"))
+			plt.plot([p_gon.x_arr[i],], [p_gon.y_arr[i],], '^', color=("tab:red" if w else "tab:green"))
+		plt.text(ax, ay, 'A')
+		plt.text(bx, by, 'B')
+		plt.grid()
+		plt.axis("equal")
+
 
 		if len(i_lst) % 2 == 0 :
 			# standard case, with as many enter as exit
@@ -141,13 +169,20 @@ class Piece() :
 				else :
 					raise ValueError
 				m_seq.push_vertices(self.shape, i0+1, i1)
+		else :
+			raise ValueError
 
 		if r_seq.b_lst :
 			r_seq.b_lst = [A,] + r_seq.b_lst  + [B,]
+			print("RRRR", r_seq.b_lst)
 			r_seq.iterative_convex_reduction()
 		if l_seq.b_lst :
 			l_seq.b_lst = [B,] + l_seq.b_lst  + [A,]
+			print("LLLL", l_seq.b_lst)
 			l_seq.iterative_convex_reduction()
+
+		plt.show()
+
 
 		return r_seq, l_seq.reversed()
 

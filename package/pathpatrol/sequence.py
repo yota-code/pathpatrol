@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
+import math
+
 import numpy as np
 
 import matplotlib
 import matplotlib.pyplot as plt
+
+from pathpatrol.common import *
 
 class Point() :
 	# free point
@@ -24,6 +28,13 @@ class Point() :
 	
 	def __eq__(self, other) :
 		return self.xy == other.xy
+	
+	def __sub__(self, other) :
+		(Ax, Ay), (Bx, By) = self.xy, other.xy
+		return (Bx - Ax, By - Ay)
+	
+	def is_inward(self, other) :
+		return False
 
 class Vertex() :
 	# point of a polygon
@@ -44,6 +55,22 @@ class Vertex() :
 	
 	def __repr__(self) :
 		return f"V{self.xy}@{self.n}"
+	
+	def next(self) :
+		return Vertex(self.p_gon, (self.n+1) % len(self.p_gon))
+
+	def prev(self) :
+		return Vertex(self.p_gon, (self.n-1) % len(self.p_gon))
+	
+	def __sub__(self, other) :
+		(Ax, Ay), (Bx, By) = self.xy, other.xy
+		return (Ax - Bx, Ay - By)
+	
+	def is_inward(self, other) :
+		A, Ap, An, B = self.xy, self.prev().xy, self.next().xy, other.xy
+		u = angle_3pt(A, An, Ap) % math.tau
+		v = angle_3pt(A, An, B) % math.tau
+		return v <= u
 
 class Sequence() :
 	""" a list of points or vertices """
