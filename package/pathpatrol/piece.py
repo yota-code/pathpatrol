@@ -111,14 +111,14 @@ class Piece() :
 		b_rgt = b_vnt.argmax()
 
 		l_seq = Sequence()
-		l_seq.push_one(A)
+		l_seq.push(A)
 		l_seq.push_vertices(self.convex, a_lft, b_lft, -1)
-		l_seq.push_one(B)
+		l_seq.push(B)
 
 		r_seq = Sequence()
-		r_seq.push_one(A)
+		r_seq.push(A)
 		r_seq.push_vertices(self.convex, a_rgt, b_rgt, 1)
-		r_seq.push_one(B)
+		r_seq.push(B)
 
 		return l_seq, r_seq
 
@@ -143,18 +143,18 @@ class Piece() :
 		if i_lst[-1][2] is None :
 			i_lst[-1][2] = not i_lst[-2][2]
 
-		plt.figure()
-		(ax, ay), (bx, by) = A.xy, B.xy
-		plt.plot([ax, bx], [ay, by], color="black")
-		self.plot()
-		p_gon = self.shape
-		for t, i, w in i_lst :
-			plt.plot([ax*(1 - t) + bx*t,], [ay*(1 - t) + by*t,], 'o', color=("tab:red" if w else "tab:green"))
-			plt.plot([p_gon.x_arr[i],], [p_gon.y_arr[i],], '^', color=("tab:red" if w else "tab:green"))
-		plt.text(ax, ay, 'A')
-		plt.text(bx, by, 'B')
-		plt.grid()
-		plt.axis("equal")
+		# plt.figure()
+		# (ax, ay), (bx, by) = A.xy, B.xy
+		# plt.plot([ax, bx], [ay, by], color="black")
+		# self.plot()
+		# p_gon = self.shape
+		# for t, i, w in i_lst :
+		# 	plt.plot([ax*(1 - t) + bx*t,], [ay*(1 - t) + by*t,], 'o', color=("tab:red" if w else "tab:green"))
+		# 	plt.plot([p_gon.x_arr[i],], [p_gon.y_arr[i],], '^', color=("tab:red" if w else "tab:green"))
+		# plt.text(ax, ay, 'A')
+		# plt.text(bx, by, 'B')
+		# plt.grid()
+		# plt.axis("equal")
 
 		if len(i_lst) % 2 == 0 :
 			# standard case, with as many enter as exit
@@ -182,7 +182,7 @@ class Piece() :
 			l_seq.b_lst = [B,] + l_seq.b_lst  + [A,]
 			l_seq.iterative_convex_reduction()
 
-		plt.show()
+		# plt.show()
 
 		return r_seq, l_seq.reversed()
 

@@ -71,19 +71,19 @@ class Vertex() :
 		u = angle_3pt(A, An, Ap) % math.tau
 		v = angle_3pt(A, An, B) % math.tau
 
-		if debug :
-			print(f"A={A}, Ap={Ap} An={An} B={B}")
-			print(f"u={math.degrees(angle_3pt(A, An, Ap))} {math.degrees(u)} v={math.degrees(angle_3pt(A, An, B))} {math.degrees(v)}")
-			print(v <= u)
-			plt.figure()
-			plt.title(f"u={math.degrees(u)} v={math.degrees(v)}")
-			plt.plot([A[0], Ap[0]], [A[1], Ap[1]], label="A - Ap")
-			plt.plot([A[0], An[0]], [A[1], An[1]], label="A - An")
-			plt.plot([A[0], B[0]], [A[1], B[1]], label="A - B")
-			plt.legend()
-			plt.axis("equal")
-			plt.grid()
-			plt.show()
+		# if debug :
+		# 	print(f"A={A}, Ap={Ap} An={An} B={B}")
+		# 	print(f"u={math.degrees(angle_3pt(A, An, Ap))} {math.degrees(u)} v={math.degrees(angle_3pt(A, An, B))} {math.degrees(v)}")
+		# 	print(v <= u)
+		# 	plt.figure()
+		# 	plt.title(f"u={math.degrees(u)} v={math.degrees(v)}")
+		# 	plt.plot([A[0], Ap[0]], [A[1], Ap[1]], label="A - Ap")
+		# 	plt.plot([A[0], An[0]], [A[1], An[1]], label="A - An")
+		# 	plt.plot([A[0], B[0]], [A[1], B[1]], label="A - B")
+		# 	plt.legend()
+		# 	plt.axis("equal")
+		# 	plt.grid()
+		# 	plt.show()
 
 		return v <= u
 

@@ -14,7 +14,7 @@ def angle_3pt(A, B, M) :
 	v = (ABx * AMy) - (ABy * AMx) # cross product
 	u = (ABx * AMx) + (ABy * AMy)
 
-	print(f"ABx={ABx} ABy={ABy} AMx={AMx} AMy={AMy} v={v} u={u} ")
+	# print(f"ABx={ABx} ABy={ABy} AMx={AMx} AMy={AMy} v={v} u={u} ")
 
 	ABn = np.sqrt(ABx**2 + ABy**2)
 	AMn = np.sqrt(AMx**2 + AMy**2)
